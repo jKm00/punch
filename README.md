@@ -13,6 +13,18 @@ make install      # builds and installs to ~/.local/bin/wh
 wh help           # verify
 ```
 
+## Uninstall
+
+```sh
+make uninstall    # removes ~/.local/bin/wh (keeps your data)
+```
+
+Your logged hours stay at `~/.local/share/wh/wh.db`. To remove them too:
+
+```sh
+rm -rf ~/.local/share/wh
+```
+
 ## Development
 
 Copy the env template, then run from source via `make dev`. `.env` sets

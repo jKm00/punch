@@ -23,7 +23,7 @@ endif
 # WH_DB precedence for dev targets: .env value (if any) wins, else DEV_DB.
 WH_DB ?= $(DEV_DB)
 
-.PHONY: build install test vet tidy clean dev dev-build dev-db-path dev-reset env
+.PHONY: build install uninstall test vet tidy clean dev dev-build dev-db-path dev-reset env
 
 # --- Production --------------------------------------------------------------
 
@@ -32,6 +32,12 @@ build:
 
 install:
 	go build -o $(INSTALL_DIR)/$(BINARY) ./cmd/wh
+
+# Remove the installed binary. Your data (~/.local/share/wh/wh.db) is kept.
+uninstall:
+	rm -f $(INSTALL_DIR)/$(BINARY)
+	@echo "Removed $(INSTALL_DIR)/$(BINARY)."
+	@echo "Your data is kept at ~/.local/share/wh/wh.db (delete it manually to remove)."
 
 test:
 	go test ./...
