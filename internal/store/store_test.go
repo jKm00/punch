@@ -66,8 +66,8 @@ func TestDayRoundTrip(t *testing.T) {
 	if got.End == nil || !got.End.Equal(end) {
 		t.Errorf("end = %v, want %v", got.End, end)
 	}
-	if got.EffectiveLunch() != 45 {
-		t.Errorf("lunch = %d, want 45", got.EffectiveLunch())
+	if got.EffectiveLunch(domain.DefaultLunchMinutes) != 45 {
+		t.Errorf("lunch = %d, want 45", got.EffectiveLunch(domain.DefaultLunchMinutes))
 	}
 
 	// Default lunch when nil.
@@ -76,8 +76,8 @@ func TestDayRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	d2, _ := st.GetDay(d2date)
-	if d2.EffectiveLunch() != domain.DefaultLunchMinutes {
-		t.Errorf("default lunch = %d, want %d", d2.EffectiveLunch(), domain.DefaultLunchMinutes)
+	if d2.EffectiveLunch(domain.DefaultLunchMinutes) != domain.DefaultLunchMinutes {
+		t.Errorf("default lunch = %d, want %d", d2.EffectiveLunch(domain.DefaultLunchMinutes), domain.DefaultLunchMinutes)
 	}
 
 	// Delete.

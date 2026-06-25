@@ -74,7 +74,7 @@ func (a *App) loadWeek(year, week int) (*weekData, error) {
 		}
 		wd.totalExpected += d.ExpectedMinutes
 		if d.Start != nil && d.End != nil {
-			wd.totalWorked += calc.WorkedMinutes(*d.Start, *d.End, d.EffectiveLunch())
+			wd.totalWorked += calc.WorkedMinutes(*d.Start, *d.End, d.EffectiveLunch(a.Config.DefaultLunchMinutes))
 			if !wd.hasLastWorkedDay || d.Date.After(lastWorked) {
 				lastWorked = d.Date
 				wd.hasLastWorkedDay = true
@@ -86,7 +86,7 @@ func (a *App) loadWeek(year, week int) (*weekData, error) {
 	if wd.hasLastWorkedDay {
 		for _, d := range days {
 			if d.Date.Equal(lastWorked) {
-				wd.lastWorkedSeason = seasonFromExpected(d.ExpectedMinutes, season)
+				wd.lastWorkedSeason = a.seasonFromExpected(d.ExpectedMinutes, season)
 			}
 		}
 	}
@@ -95,11 +95,11 @@ func (a *App) loadWeek(year, week int) (*weekData, error) {
 
 // seasonFromExpected infers the season from a snapshotted expected-minutes
 // value, falling back to the current season for non-standard values.
-func seasonFromExpected(expected int, fallback domain.Season) domain.Season {
+func (a *App) seasonFromExpected(expected int, fallback domain.Season) domain.Season {
 	switch expected {
-	case domain.SummerExpectedMinutes:
+	case a.Config.SummerExpectedMinutes:
 		return domain.Summer
-	case domain.WinterExpectedMinutes:
+	case a.Config.WinterExpectedMinutes:
 		return domain.Winter
 	default:
 		return fallback
@@ -178,7 +178,7 @@ func (a *App) printWeek(wd *weekData) error {
 				rec.Start.Format("15:04")+s.Dim("–open"), s.Cyan("open"),
 				calc.FormatHM(rec.ExpectedMinutes), dash))
 		case rec.Start != nil && rec.End != nil:
-			worked := calc.WorkedMinutes(*rec.Start, *rec.End, rec.EffectiveLunch())
+			worked := calc.WorkedMinutes(*rec.Start, *rec.End, rec.EffectiveLunch(a.Config.DefaultLunchMinutes))
 			bal := worked - rec.ExpectedMinutes
 			lines = append(lines, row(wd3, dateStr,
 				rec.Start.Format("15:04")+"–"+rec.End.Format("15:04"),
@@ -203,7 +203,7 @@ func (a *App) printWeek(wd *weekData) error {
 		s.Bold("Balance ")+" "+ui.PadRight(s.Balance(balance, calc.FormatHM(balance)), 9)+s.Dim("("+calc.FormatDecimalHours(balance)+")"))
 
 	if balance > 0 {
-		sh, sm, eh, em := calc.LoggingEnd(wd.lastWorkedSeason, balance)
+		sh, sm, eh, em := calc.LoggingEnd(a.Config, wd.lastWorkedSeason, balance)
 		lines = append(lines, s.Green(fmt.Sprintf("Log     %s–%s",
 			calc.FormatClock(sh, sm), calc.FormatClock(eh, em)))+
 			s.Dim(fmt.Sprintf("  (extra %s, %s season)", calc.FormatHM(balance), wd.lastWorkedSeason)))
@@ -370,16 +370,16 @@ func (a *App) CmdSeason(args []string) error {
 		a.printf("%s season set to %s %s\n",
 			a.styler().Green("✓"), a.styler().Bold(arg),
 			a.styler().Dim(fmt.Sprintf("(expected %s/day, logging starts %s)",
-				calc.FormatHM(domain.ExpectedMinutesFor(domain.Season(arg))),
-				logStartClock(domain.Season(arg)))))
+				calc.FormatHM(a.Config.ExpectedMinutesFor(domain.Season(arg))),
+				a.logStartClock(domain.Season(arg)))))
 		return nil
 	default:
 		return fmt.Errorf("invalid season %q: use `summer` or `winter`", arg)
 	}
 }
 
-func logStartClock(s domain.Season) string {
-	h, m := domain.LoggingStartFor(s)
+func (a *App) logStartClock(s domain.Season) string {
+	h, m := a.Config.LoggingStartFor(s)
 	return calc.FormatClock(h, m)
 }
 
@@ -412,14 +412,14 @@ func (a *App) CmdStatus(args []string) error {
 		lines = append(lines, s.Dim("Status ")+s.Yellow("OFF"))
 	case day.Start != nil && day.End == nil:
 		elapsed := int(now.Sub(*day.Start).Minutes())
-		netSoFar := elapsed - day.EffectiveLunch()
+		netSoFar := elapsed - day.EffectiveLunch(a.Config.DefaultLunchMinutes)
 		if netSoFar < 0 {
 			netSoFar = 0
 		}
 		lines = append(lines, s.Dim("Status ")+s.Cyan("clocked IN")+s.Dim(" since ")+day.Start.Format("15:04"))
 		lines = append(lines, s.Dim("Elapsed ")+calc.FormatHM(elapsed)+s.Dim("   net of lunch ")+calc.FormatHM(netSoFar))
 	case day.Start != nil && day.End != nil:
-		worked := calc.WorkedMinutes(*day.Start, *day.End, day.EffectiveLunch())
+		worked := calc.WorkedMinutes(*day.Start, *day.End, day.EffectiveLunch(a.Config.DefaultLunchMinutes))
 		lines = append(lines, s.Dim("Status ")+s.Green("clocked OUT")+s.Dim(" ")+day.Start.Format("15:04")+"–"+day.End.Format("15:04"))
 		lines = append(lines, s.Dim("Worked ")+calc.FormatHM(worked)+s.Dim(" ("+calc.FormatDecimalHours(worked)+")"))
 	default:

@@ -28,7 +28,7 @@ func dateOf(t *testing.T, s string) time.Time {
 func lunch(n int) *int { return &n }
 
 func TestComputeEmptyHasNoData(t *testing.T) {
-	s := Compute(2025, nil, nil)
+	s := Compute(2025, nil, 30, nil)
 	if s.HasData {
 		t.Error("expected HasData=false for no days")
 	}
@@ -57,7 +57,7 @@ func TestComputeBasicTotalsAndAverages(t *testing.T) {
 		{Date: thu, Start: ptr(tm(t, "2025-01-09 08:00"))}, // open (no end)
 	}
 
-	s := Compute(2025, days, map[WeekKey]bool{})
+	s := Compute(2025, days, 30, map[WeekKey]bool{})
 
 	if !s.HasData {
 		t.Fatal("expected HasData=true")
@@ -110,7 +110,7 @@ func TestComputeExtremes(t *testing.T) {
 		mk(d1, "07:00", "17:00"), // 600 worked, start 420, end 1020
 		mk(d2, "09:30", "15:00"), // 330 worked, start 570, end 900
 	}
-	s := Compute(2025, days, nil)
+	s := Compute(2025, days, 30, nil)
 
 	if !s.Longest.Valid || s.Longest.Minutes != 600 || !s.Longest.Date.Equal(d1) {
 		t.Errorf("Longest wrong: %+v", s.Longest)
@@ -139,7 +139,7 @@ func TestComputeWeekdayAndMonthDistribution(t *testing.T) {
 		mk(mon, "08:00", "16:00"), // 480, Monday (index 0), January (0)
 		mk(fri, "08:00", "12:00"), // 240, Friday (index 4), February (1)
 	}
-	s := Compute(2025, days, nil)
+	s := Compute(2025, days, 30, nil)
 
 	if s.ByWeekday[0] != 480 {
 		t.Errorf("Monday total = %d, want 480", s.ByWeekday[0])
@@ -167,7 +167,7 @@ func TestComputeWeekLoggedCoverage(t *testing.T) {
 	y2, wk2 := w2.ISOWeek()
 	logged := map[WeekKey]bool{{Year: y2, Week: wk2}: true}
 
-	s := Compute(2025, []*store.Day{mk(w2), mk(w3)}, logged)
+	s := Compute(2025, []*store.Day{mk(w2), mk(w3)}, 30, logged)
 
 	if s.WeeksActive != 2 {
 		t.Errorf("WeeksActive = %d, want 2", s.WeeksActive)

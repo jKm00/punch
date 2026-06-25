@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -26,17 +27,18 @@ type Day struct {
 	Date            time.Time // calendar date (00:00, local)
 	Start           *time.Time
 	End             *time.Time
-	LunchMinutes    *int // nil => use domain.DefaultLunchMinutes
+	LunchMinutes    *int // nil => use the configured default lunch
 	ExpectedMinutes int
 	IsOff           bool
 }
 
-// EffectiveLunch returns the lunch minutes to apply for this day.
-func (d Day) EffectiveLunch() int {
+// EffectiveLunch returns the lunch minutes to apply for this day, using
+// defaultLunch (the configured default) when the day has no per-day override.
+func (d Day) EffectiveLunch(defaultLunch int) int {
 	if d.LunchMinutes != nil {
 		return *d.LunchMinutes
 	}
-	return domain.DefaultLunchMinutes
+	return defaultLunch
 }
 
 // Store is a handle to the SQLite database.
@@ -124,26 +126,146 @@ CREATE TABLE IF NOT EXISTS settings (
 
 const seasonKey = "season"
 
-// Season returns the configured season, defaulting when unset.
-func (s *Store) Season() (domain.Season, error) {
+// Settings keys for the configurable values written by the setup wizard. Each
+// is one row in the generic key/value settings table. When a key is absent the
+// corresponding domain constant is used as a fallback (see LoadConfig).
+const (
+	winterExpectedMinutesKey = "winter_expected_minutes"
+	summerExpectedMinutesKey = "summer_expected_minutes"
+	winterLoggingStartKey    = "winter_logging_start"
+	summerLoggingStartKey    = "summer_logging_start"
+	defaultLunchMinutesKey   = "default_lunch_minutes"
+
+	// setupCompletedKey is the sentinel written LAST after a successful setup
+	// run. Its presence marks setup as complete.
+	setupCompletedKey = "setup_completed"
+)
+
+// getSetting returns the raw value for a settings key and whether it was found.
+func (s *Store) getSetting(key string) (string, bool, error) {
 	var v string
-	err := s.db.QueryRow(`SELECT value FROM settings WHERE key = ?`, seasonKey).Scan(&v)
+	err := s.db.QueryRow(`SELECT value FROM settings WHERE key = ?`, key).Scan(&v)
 	if errors.Is(err, sql.ErrNoRows) {
-		return domain.DefaultSeason, nil
+		return "", false, nil
 	}
 	if err != nil {
+		return "", false, err
+	}
+	return v, true, nil
+}
+
+// setSetting upserts a settings key/value pair.
+func (s *Store) setSetting(key, value string) error {
+	_, err := s.db.Exec(
+		`INSERT INTO settings(key, value) VALUES(?, ?)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+		key, value)
+	return err
+}
+
+// SetupCompleted reports whether the setup wizard has been completed (the
+// setup_completed sentinel key is present).
+func (s *Store) SetupCompleted() (bool, error) {
+	_, ok, err := s.getSetting(setupCompletedKey)
+	return ok, err
+}
+
+// SaveConfig persists every configurable value and, last of all, the
+// setup_completed sentinel. Values are written sequentially; the sentinel is
+// written only after all others succeed so an interrupted run is not treated as
+// complete. season is written via the same key as `punch season`.
+func (s *Store) SaveConfig(cfg domain.Config, season domain.Season) error {
+	writes := []struct{ key, value string }{
+		{winterExpectedMinutesKey, strconv.Itoa(cfg.WinterExpectedMinutes)},
+		{summerExpectedMinutesKey, strconv.Itoa(cfg.SummerExpectedMinutes)},
+		{winterLoggingStartKey, formatTimeOfDay(cfg.WinterLoggingStart)},
+		{summerLoggingStartKey, formatTimeOfDay(cfg.SummerLoggingStart)},
+		{defaultLunchMinutesKey, strconv.Itoa(cfg.DefaultLunchMinutes)},
+		{seasonKey, string(season)},
+	}
+	for _, w := range writes {
+		if err := s.setSetting(w.key, w.value); err != nil {
+			return err
+		}
+	}
+	// setup_completed must be written last.
+	return s.setSetting(setupCompletedKey, "true")
+}
+
+// LoadConfig resolves the configuration for this invocation: for each key it
+// reads the stored value, falling back to the corresponding domain constant
+// when absent. Malformed stored values fall back to the constant too, so a bad
+// row never breaks the CLI.
+func (s *Store) LoadConfig() (domain.Config, error) {
+	cfg := domain.DefaultConfig()
+
+	if v, ok, err := s.getSetting(winterExpectedMinutesKey); err != nil {
+		return cfg, err
+	} else if ok {
+		if n, perr := strconv.Atoi(v); perr == nil {
+			cfg.WinterExpectedMinutes = n
+		}
+	}
+	if v, ok, err := s.getSetting(summerExpectedMinutesKey); err != nil {
+		return cfg, err
+	} else if ok {
+		if n, perr := strconv.Atoi(v); perr == nil {
+			cfg.SummerExpectedMinutes = n
+		}
+	}
+	if v, ok, err := s.getSetting(winterLoggingStartKey); err != nil {
+		return cfg, err
+	} else if ok {
+		if tod, perr := parseTimeOfDay(v); perr == nil {
+			cfg.WinterLoggingStart = tod
+		}
+	}
+	if v, ok, err := s.getSetting(summerLoggingStartKey); err != nil {
+		return cfg, err
+	} else if ok {
+		if tod, perr := parseTimeOfDay(v); perr == nil {
+			cfg.SummerLoggingStart = tod
+		}
+	}
+	if v, ok, err := s.getSetting(defaultLunchMinutesKey); err != nil {
+		return cfg, err
+	} else if ok {
+		if n, perr := strconv.Atoi(v); perr == nil {
+			cfg.DefaultLunchMinutes = n
+		}
+	}
+	return cfg, nil
+}
+
+// formatTimeOfDay renders a TimeOfDay as "HH:MM" for storage.
+func formatTimeOfDay(t domain.TimeOfDay) string {
+	return fmt.Sprintf("%02d:%02d", t.Hour, t.Minute)
+}
+
+// parseTimeOfDay parses a stored "HH:MM" value into a TimeOfDay.
+func parseTimeOfDay(v string) (domain.TimeOfDay, error) {
+	t, err := time.Parse("15:04", v)
+	if err != nil {
+		return domain.TimeOfDay{}, fmt.Errorf("parse time-of-day %q: %w", v, err)
+	}
+	return domain.TimeOfDay{Hour: t.Hour(), Minute: t.Minute()}, nil
+}
+
+// Season returns the configured season, defaulting when unset.
+func (s *Store) Season() (domain.Season, error) {
+	v, ok, err := s.getSetting(seasonKey)
+	if err != nil {
 		return "", err
+	}
+	if !ok {
+		return domain.DefaultSeason, nil
 	}
 	return domain.Normalize(v), nil
 }
 
 // SetSeason persists the season.
 func (s *Store) SetSeason(season domain.Season) error {
-	_, err := s.db.Exec(
-		`INSERT INTO settings(key, value) VALUES(?, ?)
-		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-		seasonKey, string(season))
-	return err
+	return s.setSetting(seasonKey, string(season))
 }
 
 // ---- days ----

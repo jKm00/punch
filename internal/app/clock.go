@@ -83,7 +83,7 @@ func (a *App) CmdIn(args []string) error {
 	if day == nil {
 		day = &store.Day{
 			Date:            date,
-			ExpectedMinutes: domain.ExpectedMinutesFor(season),
+			ExpectedMinutes: a.Config.ExpectedMinutesFor(season),
 		}
 	}
 	if day.IsOff {
@@ -153,7 +153,7 @@ func (a *App) CmdOut(args []string) error {
 		return err
 	}
 
-	worked := calc.WorkedMinutes(*day.Start, end, day.EffectiveLunch())
+	worked := calc.WorkedMinutes(*day.Start, end, day.EffectiveLunch(a.Config.DefaultLunchMinutes))
 	a.printf("%s clocked out %s at %s — worked %s %s\n",
 		a.styler().Green("✓"), date.Format(displayDateWeekday), a.styler().Bold(end.Format("15:04")),
 		a.styler().Bold(calc.FormatHM(worked)), a.styler().Dim("("+calc.FormatDecimalHours(worked)+")"))
@@ -214,7 +214,7 @@ func (a *App) CmdSet(args []string) error {
 		Date:            date,
 		Start:           &start,
 		End:             &end,
-		ExpectedMinutes: domain.ExpectedMinutesFor(season),
+		ExpectedMinutes: a.Config.ExpectedMinutesFor(season),
 	}
 	// Preserve previous per-day overrides unless changed.
 	if before != nil && !before.IsOff {
@@ -241,10 +241,10 @@ func (a *App) CmdSet(args []string) error {
 	}
 
 	a.printf("%s set %s\n", a.styler().Green("✓"), date.Format(displayDateWeekday))
-	a.printf("  %s %s\n", a.styler().Dim("before:"), describeDay(before))
-	a.printf("  %s %s\n", a.styler().Dim("after: "), describeDay(newDay))
+	a.printf("  %s %s\n", a.styler().Dim("before:"), a.describeDay(before))
+	a.printf("  %s %s\n", a.styler().Dim("after: "), a.describeDay(newDay))
 
-	worked := calc.WorkedMinutes(start, end, newDay.EffectiveLunch())
+	worked := calc.WorkedMinutes(start, end, newDay.EffectiveLunch(a.Config.DefaultLunchMinutes))
 	if worked > domain.LongDayMinutes {
 		a.errorf("%s that is a very long day (%s)\n", a.styler().Yellow("warning:"), calc.FormatHM(worked))
 	}
@@ -329,7 +329,7 @@ func (a *App) CmdClear(args []string) error {
 	return nil
 }
 
-func describeDay(d *store.Day) string {
+func (a *App) describeDay(d *store.Day) string {
 	if d == nil {
 		return "(none)"
 	}
@@ -346,9 +346,9 @@ func describeDay(d *store.Day) string {
 	}
 	worked := 0
 	if d.Start != nil && d.End != nil {
-		worked = calc.WorkedMinutes(*d.Start, *d.End, d.EffectiveLunch())
+		worked = calc.WorkedMinutes(*d.Start, *d.End, d.EffectiveLunch(a.Config.DefaultLunchMinutes))
 	}
 	return fmt.Sprintf("%s–%s lunch %s worked %s expected %s",
-		s, e, calc.FormatHM(d.EffectiveLunch()),
+		s, e, calc.FormatHM(d.EffectiveLunch(a.Config.DefaultLunchMinutes)),
 		calc.FormatHM(worked), calc.FormatHM(d.ExpectedMinutes))
 }

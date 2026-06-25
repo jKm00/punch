@@ -27,11 +27,12 @@ func newTestApp(t *testing.T) (*App, *bytes.Buffer, *bytes.Buffer) {
 
 	var out, errb bytes.Buffer
 	a := &App{
-		Store: st,
-		Now:   func() time.Time { return fixedNow },
-		Loc:   time.UTC,
-		Out:   &out,
-		Err:   &errb,
+		Store:  st,
+		Now:    func() time.Time { return fixedNow },
+		Loc:    time.UTC,
+		Out:    &out,
+		Err:    &errb,
+		Config: domain.DefaultConfig(),
 	}
 	return a, &out, &errb
 }

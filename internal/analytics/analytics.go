@@ -65,10 +65,11 @@ type WeekKey struct {
 }
 
 // Compute builds a Summary for the given year from the day records (which the
-// caller has already filtered/loaded for that year). loggedWeeks reports, for
-// an ISO year-week, whether it has been logged; lookups for weeks not present
-// default to false (unlogged).
-func Compute(year int, days []*store.Day, loggedWeeks map[WeekKey]bool) *Summary {
+// caller has already filtered/loaded for that year). defaultLunch is the
+// configured default lunch in minutes, applied to days without a per-day
+// override. loggedWeeks reports, for an ISO year-week, whether it has been
+// logged; lookups for weeks not present default to false (unlogged).
+func Compute(year int, days []*store.Day, defaultLunch int, loggedWeeks map[WeekKey]bool) *Summary {
 	s := &Summary{Year: year}
 
 	var (
@@ -90,11 +91,11 @@ func Compute(year int, days []*store.Day, loggedWeeks map[WeekKey]bool) *Summary
 		}
 
 		// A fully clocked day.
-		worked := calc.WorkedMinutes(*d.Start, *d.End, d.EffectiveLunch())
+		worked := calc.WorkedMinutes(*d.Start, *d.End, d.EffectiveLunch(defaultLunch))
 		s.DaysWorked++
 		s.TotalWorked += worked
 		s.TotalExpected += d.ExpectedMinutes
-		s.TotalLunch += d.EffectiveLunch()
+		s.TotalLunch += d.EffectiveLunch(defaultLunch)
 		s.HasData = true
 
 		// Weekday / month distribution (Go: Sunday=0..Saturday=6; remap Monday=0).

@@ -48,7 +48,7 @@ func TestLoggingEnd(t *testing.T) {
 		{domain.Summer, 165, 15, 30, 18, 15},
 	}
 	for _, tc := range tests {
-		sh, sm, eh, em := LoggingEnd(tc.season, tc.extra)
+		sh, sm, eh, em := LoggingEnd(domain.DefaultConfig(), tc.season, tc.extra)
 		if sh != tc.wantSH || sm != tc.wantSM || eh != tc.wantEH || em != tc.wantEM {
 			t.Errorf("LoggingEnd(%s,%d) = %02d:%02d-%02d:%02d, want %02d:%02d-%02d:%02d",
 				tc.season, tc.extra, sh, sm, eh, em, tc.wantSH, tc.wantSM, tc.wantEH, tc.wantEM)

@@ -55,7 +55,7 @@ func (a *App) CmdAnalytics(args []string) error {
 		logged[key] = at != nil
 	}
 
-	sum := analytics.Compute(year, days, logged)
+	sum := analytics.Compute(year, days, a.Config.DefaultLunchMinutes, logged)
 
 	if !sum.HasData {
 		a.printf("No data for %d.\n", year)

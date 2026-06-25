@@ -16,6 +16,7 @@ COMMANDS
   unlogged                              List past unlogged weeks that have worked time.
   log   [N|last] [--year YYYY]          Mark a week logged (bare = current week).
   season [summer|winter]                Print or set the season.
+  setup [--curr]                        Configure punch (expected hours, logging times, lunch, season). --curr prints current config.
   status                                Show clock-in state and time so far today.
   analytics [YEAR]                      Yearly dashboard (default: current year).
   version                               Print the installed version.

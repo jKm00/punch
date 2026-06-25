@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"punch/internal/domain"
 	"punch/internal/store"
 	"punch/internal/ui"
 )
@@ -26,12 +27,14 @@ const (
 
 // App carries the dependencies shared by all command handlers.
 type App struct {
-	Store *store.Store
-	Now   func() time.Time
-	Loc   *time.Location
-	Out   io.Writer
-	Err   io.Writer
-	UI    *ui.Styler
+	Store  *store.Store
+	Now    func() time.Time
+	Loc    *time.Location
+	In     io.Reader
+	Out    io.Writer
+	Err    io.Writer
+	UI     *ui.Styler
+	Config domain.Config
 }
 
 // styler returns the App's styler, defaulting to a disabled (plain) styler when
