@@ -6,20 +6,30 @@ the company's official app.
 
 ## Installation
 
-### Download a release (recommended)
+### Install script (recommended)
 
-Grab the binary for your platform from the
-[latest release](https://dnb.ghe.com/Joakim-Edvardsen/punch/releases/latest),
-then put it on your `$PATH`:
+Run this one-liner — it detects your OS/arch, downloads the latest release,
+verifies the checksum, and installs `punch` to `~/.local/bin`:
 
 ```sh
-# pick the asset for your OS/arch, e.g. darwin_arm64 / darwin_amd64 / linux_amd64 / linux_arm64
-tar -xzf punch_<version>_darwin_arm64.tar.gz
-install -m 0755 punch ~/.local/bin/punch
-punch version          # verify
+curl -fsSL https://dnb.ghe.com/raw/Joakim-Edvardsen/punch/main/install.sh | bash
 ```
 
-Make sure `~/.local/bin` is on your `$PATH`.
+If the repo requires authentication (most GitHub Enterprise repos do), set a
+token first so both the script fetch and the download can authenticate:
+
+```sh
+export GH_ENTERPRISE_TOKEN=<your-token>
+curl -fsSL -H "Authorization: Bearer $GH_ENTERPRISE_TOKEN" \
+  https://dnb.ghe.com/raw/Joakim-Edvardsen/punch/main/install.sh | bash
+```
+
+The script warns you if `~/.local/bin` isn't on your `$PATH` and tells you how
+to fix it. Afterwards:
+
+```sh
+punch help
+```
 
 ### Build from source
 
@@ -87,8 +97,9 @@ make test         # run tests
 Releases are cut by pushing a semver tag. A GitHub Actions workflow
 (`.github/workflows/release.yml`) builds binaries for macOS and Linux
 (`amd64`/`arm64`), packages each as `punch_<version>_<os>_<arch>.tar.gz`,
-generates a `SHA256SUMS` file, and attaches them all to a GitHub Release. The
-version is stamped into the binary via `-ldflags -X main.version`.
+generates a `SHA256SUMS` file, and attaches them — along with `install.sh` —
+to a GitHub Release. The version is stamped into the binary via
+`-ldflags -X main.version`.
 
 ```sh
 git tag v1.0.0

@@ -56,6 +56,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -68,6 +70,9 @@ jobs:
           find artifacts -name '*.tar.gz' -exec cp {} release/ \;
           # Combine the per-asset checksums into a single SHA256SUMS file.
           find artifacts -name '*.sha256' -exec cat {} \; > release/SHA256SUMS
+          # Ship the installer alongside the binaries so the README one-liner
+          # can fetch it from the release.
+          cp install.sh release/install.sh
           ls -l release
 
       - name: Create / update release
@@ -76,4 +81,5 @@ jobs:
           files: |
             release/*.tar.gz
             release/SHA256SUMS
+            release/install.sh
           generate_release_notes: true
