@@ -3,11 +3,11 @@
 # punch installer.
 #
 # Usage (one-liner):
-#   curl -fsSL https://dnb.ghe.com/api/v3/repos/Joakim-Edvardsen/punch/releases/assets/<id> \
-#     -H "Accept: application/octet-stream" | bash
+#   curl -fsSL https://raw.dnb.ghe.com/Joakim-Edvardsen/punch/refs/heads/main/install.sh | bash
 #
-# In practice users run the one-liner shown in the README, which fetches this
-# script from the latest release. The script then:
+# (If the repo requires auth, prefix with an Authorization header — see README.)
+#
+# The script:
 #   1. detects the OS/arch,
 #   2. finds the latest release via the GitHub Enterprise API,
 #   3. downloads the matching tarball + SHA256SUMS,
