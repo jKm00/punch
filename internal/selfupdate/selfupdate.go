@@ -24,16 +24,14 @@ import (
 	"time"
 )
 
-// Repo coordinates on GitHub Enterprise.
+// Repo coordinates on github.com.
 const (
-	// GHEHost is the GitHub Enterprise host.
-	GHEHost = "dnb.ghe.com"
 	// Owner and Repo identify the releases source.
-	Owner = "Joakim-Edvardsen"
+	Owner = "jKm00"
 	Repo  = "punch"
 
-	// apiBase is the GitHub Enterprise REST API v3 base URL.
-	apiBase = "https://" + GHEHost + "/api/v3"
+	// apiBase is the github.com REST API base URL.
+	apiBase = "https://api.github.com"
 )
 
 // httpTimeout bounds every network call so the CLI never hangs.

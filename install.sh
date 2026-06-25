@@ -3,28 +3,25 @@
 # punch installer.
 #
 # Usage (one-liner):
-#   curl -fsSL https://raw.dnb.ghe.com/Joakim-Edvardsen/punch/refs/heads/main/install.sh | bash
-#
-# (If the repo requires auth, prefix with an Authorization header — see README.)
+#   curl -fsSL https://raw.githubusercontent.com/jKm00/punch/main/install.sh | bash
 #
 # The script:
 #   1. detects the OS/arch,
-#   2. finds the latest release via the GitHub Enterprise API,
+#   2. finds the latest release via the GitHub API,
 #   3. downloads the matching tarball + SHA256SUMS,
 #   4. verifies the checksum,
 #   5. installs the `punch` binary to ~/.local/bin,
 #   6. warns if ~/.local/bin is not on your PATH.
 #
-# Authentication: if the GitHub Enterprise repo requires auth to read releases,
-# set GH_ENTERPRISE_TOKEN (or GITHUB_TOKEN) before running.
+# The repo is public, so no token is needed. (If you ever make it private, set
+# GITHUB_TOKEN before running.)
 
 set -euo pipefail
 
 # --- Configuration (single source of truth) ---------------------------------
-GHE_HOST="dnb.ghe.com"
-OWNER="Joakim-Edvardsen"
+OWNER="jKm00"
 REPO="punch"
-API_BASE="https://${GHE_HOST}/api/v3"
+API_BASE="https://api.github.com"
 INSTALL_DIR="${HOME}/.local/bin"
 BINARY="punch"
 
@@ -42,11 +39,10 @@ need() {
   command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
 }
 
-# Token from the environment, if any.
+# Token from the environment, if any (optional for public repos).
 token() {
-  if [ -n "${GH_ENTERPRISE_TOKEN:-}" ]; then printf '%s' "${GH_ENTERPRISE_TOKEN}"; return; fi
-  if [ -n "${GITHUB_TOKEN:-}" ];        then printf '%s' "${GITHUB_TOKEN}";        return; fi
-  if [ -n "${PUNCH_GITHUB_TOKEN:-}" ];  then printf '%s' "${PUNCH_GITHUB_TOKEN}";  return; fi
+  if [ -n "${GITHUB_TOKEN:-}" ];       then printf '%s' "${GITHUB_TOKEN}";       return; fi
+  if [ -n "${PUNCH_GITHUB_TOKEN:-}" ]; then printf '%s' "${PUNCH_GITHUB_TOKEN}"; return; fi
   printf ''
 }
 
@@ -86,11 +82,12 @@ fetch_release_json() {
   # Capture HTTP status separately so we can explain auth errors.
   out="$(api_curl "application/vnd.github+json" -w $'\n%{http_code}' "${url}" 2>/dev/null)" || {
     status="${out##*$'\n'}"
+    if [ "${status}" = "404" ]; then
+      die "no releases found at ${url} (has a version been released yet?)."
+    fi
     if [ "${status}" = "401" ] || [ "${status}" = "403" ]; then
-      die "GitHub Enterprise returned ${status} reading releases. This repo requires authentication.
-Set a token first, e.g.:
-    export GH_ENTERPRISE_TOKEN=<your-token>
-then re-run the install command."
+      die "GitHub returned ${status} reading releases. If this repo is private,
+set a token first:  export GITHUB_TOKEN=<your-token>  then re-run."
     fi
     die "could not reach the releases API at ${url} (curl failed)."
   }

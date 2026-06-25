@@ -12,16 +12,7 @@ Run this one-liner — it detects your OS/arch, downloads the latest release,
 verifies the checksum, and installs `punch` to `~/.local/bin`:
 
 ```sh
-curl -fsSL https://raw.dnb.ghe.com/Joakim-Edvardsen/punch/refs/heads/main/install.sh | bash
-```
-
-If the repo requires authentication (most GitHub Enterprise repos do), set a
-token first so both the script fetch and the download can authenticate:
-
-```sh
-export GH_ENTERPRISE_TOKEN=<your-token>
-curl -fsSL -H "Authorization: Bearer $GH_ENTERPRISE_TOKEN" \
-  https://raw.dnb.ghe.com/Joakim-Edvardsen/punch/refs/heads/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/jKm00/punch/main/install.sh | bash
 ```
 
 The script warns you if `~/.local/bin` isn't on your `$PATH` and tells you how
@@ -57,9 +48,6 @@ punch upgrade          # downloads the latest release, verifies it, replaces the
 
 Notes:
 
-- The update check and `upgrade` talk to GitHub Enterprise. If the repo
-  requires authentication, set a token via `GH_ENTERPRISE_TOKEN` (or
-  `GITHUB_TOKEN` / `PUNCH_GITHUB_TOKEN`).
 - Disable the background check with `PUNCH_NO_UPDATE_CHECK=1`.
 - Builds installed from source report version `dev` and are never auto-nagged
   or self-replaced — use `make install` to update them.
