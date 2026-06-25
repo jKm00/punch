@@ -1,6 +1,6 @@
-// Package selfupdate handles version comparison, checking the GitHub
-// Enterprise Releases API for newer versions, and replacing the running binary
-// in place (`punch upgrade`).
+// Package selfupdate handles version comparison, checking the GitHub Releases
+// API for newer versions, and replacing the running binary in place
+// (`punch upgrade`).
 //
 // Repo coordinates are defined here as the single source of truth.
 package selfupdate
@@ -112,8 +112,8 @@ type Asset struct {
 	URL  string `json:"url"` // API URL (asset id), used with Accept: octet-stream
 }
 
-// token returns an auth token from the environment, if any. GHE often requires
-// auth even for reads.
+// token returns an auth token from the environment, if any. Public repos do
+// not need one; this supports private repos and higher rate limits.
 func token() string {
 	for _, k := range []string{"PUNCH_GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_TOKEN"} {
 		if v := os.Getenv(k); v != "" {
@@ -373,7 +373,7 @@ func findAsset(rel *Release, name string) *Asset {
 }
 
 // downloadAsset fetches an asset's bytes via the API asset URL (works on
-// private GHE repos with the octet-stream Accept header and auth).
+// private repos too with the octet-stream Accept header and auth).
 func downloadAsset(a *Asset) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, a.URL, nil)
 	if err != nil {
