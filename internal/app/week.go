@@ -165,7 +165,7 @@ func (a *App) printWeek(wd *weekData) error {
 		key := day.Format(store.DateLayout)
 		rec := byDate[key]
 		wd3 := day.Format("Mon")
-		dateStr := day.Format("2006-01-02")
+		dateStr := day.Format(displayDate)
 		dash := s.Dim("—")
 
 		switch {
@@ -214,15 +214,15 @@ func (a *App) printWeek(wd *weekData) error {
 		return err
 	}
 	if loggedAt != nil {
-		lines = append(lines, s.Green("✓ logged")+s.Dim(" at "+loggedAt.Format("2006-01-02 15:04")))
+		lines = append(lines, s.Green("✓ logged")+s.Dim(" at "+loggedAt.Format(displayDateTime)))
 	} else {
 		lines = append(lines, s.Yellow("• not logged"))
 	}
 
 	title := fmt.Sprintf("Week %d  %s – %s",
 		wd.week,
-		wd.monday.Format("Mon 2006-01-02"),
-		wd.sunday.Format("Mon 2006-01-02"))
+		wd.monday.Format(displayDateWeekday),
+		wd.sunday.Format(displayDateWeekday))
 	a.printf("%s", s.Box(title, lines))
 	return nil
 }
@@ -298,7 +298,7 @@ func (a *App) CmdUnlogged(args []string) error {
 	var lines []string
 	lines = append(lines, s.Bold(rowU("Week", "Range", "Pending extra")))
 	for _, p := range pendings {
-		rng := fmt.Sprintf("%s – %s", p.monday.Format("2006-01-02"), p.sunday.Format("2006-01-02"))
+		rng := fmt.Sprintf("%s – %s", p.monday.Format(displayDate), p.sunday.Format(displayDate))
 		lines = append(lines, rowU(
 			s.Yellow(isoweek.Key(p.year, p.week)),
 			rng,
@@ -342,7 +342,7 @@ func (a *App) CmdLog(args []string) error {
 	if err := a.Store.SetWeekLogged(isoweek.Key(year, week), at); err != nil {
 		return err
 	}
-	a.printf("%s %s logged at %s\n", a.styler().Green("✓"), isoweek.Key(year, week), at.Format("2006-01-02 15:04"))
+	a.printf("%s %s logged at %s\n", a.styler().Green("✓"), isoweek.Key(year, week), at.Format(displayDateTime))
 	return nil
 }
 
@@ -403,7 +403,7 @@ func (a *App) CmdStatus(args []string) error {
 
 	s := a.styler()
 	var lines []string
-	lines = append(lines, s.Dim("Date   ")+today.Format("Mon 2006-01-02")+s.Dim("  season ")+string(season))
+	lines = append(lines, s.Dim("Date   ")+today.Format(displayDateWeekday)+s.Dim("  season ")+string(season))
 
 	switch {
 	case day == nil:

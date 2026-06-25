@@ -105,7 +105,7 @@ func (a *App) printAnalytics(s *analytics.Summary) {
 		} else {
 			val = calc.FormatHM(e.Minutes)
 		}
-		return kv(label, val+st.Dim("  "+e.Date.Format("Mon 2006-01-02")))
+		return kv(label, val+st.Dim("  "+e.Date.Format(displayDateWeekday)))
 	}
 	extremes := []string{
 		ext("Longest day", s.Longest, false),

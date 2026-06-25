@@ -11,6 +11,19 @@ import (
 	"punch/internal/ui"
 )
 
+// Display layouts for user-facing dates. punch uses day-first European format
+// in all output, matching the DD.MM.YYYY form accepted on the CLI. These are
+// distinct from store.DateLayout (the ISO "2006-01-02" SQLite key), which must
+// not change.
+const (
+	// displayDate renders a date as DD.MM.YYYY (e.g. 24.06.2026).
+	displayDate = "02.01.2006"
+	// displayDateWeekday prefixes the weekday (e.g. Wed 24.06.2026).
+	displayDateWeekday = "Mon 02.01.2006"
+	// displayDateTime renders date and time (e.g. 24.06.2026 15:04).
+	displayDateTime = "02.01.2006 15:04"
+)
+
 // App carries the dependencies shared by all command handlers.
 type App struct {
 	Store *store.Store

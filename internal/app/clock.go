@@ -68,7 +68,7 @@ func (a *App) CmdIn(args []string) error {
 	// The bare in-case subtracts 5 minutes, so it is always in the past; only
 	// literal/explicit times are subject to the future check.
 	if !bareAdjust && start.After(a.now()) && !*force {
-		return fmt.Errorf("start %s is in the future; pass --force to allow", start.Format("2006-01-02 15:04"))
+		return fmt.Errorf("start %s is in the future; pass --force to allow", start.Format(displayDateTime))
 	}
 
 	day, err := a.Store.GetDay(date)
@@ -87,18 +87,18 @@ func (a *App) CmdIn(args []string) error {
 		}
 	}
 	if day.IsOff {
-		return fmt.Errorf("%s is marked OFF; run `punch off %s --clear` first", date.Format(store.DateLayout), date.Format("02.01.2006"))
+		return fmt.Errorf("%s is marked OFF; run `punch off %s --clear` first", date.Format(displayDate), date.Format(displayDate))
 	}
 	if day.Start != nil && !*force {
 		return fmt.Errorf("already clocked in at %s on %s; use --force to overwrite or `punch set` to edit",
-			day.Start.Format("15:04"), date.Format(store.DateLayout))
+			day.Start.Format("15:04"), date.Format(displayDate))
 	}
 
 	day.Start = &start
 	if err := a.Store.UpsertDay(day); err != nil {
 		return err
 	}
-	a.printf("%s clocked in %s at %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"), a.styler().Bold(start.Format("15:04")))
+	a.printf("%s clocked in %s at %s\n", a.styler().Green("✓"), date.Format(displayDateWeekday), a.styler().Bold(start.Format("15:04")))
 	return nil
 }
 
@@ -121,10 +121,10 @@ func (a *App) CmdOut(args []string) error {
 		return err
 	}
 	if day == nil || day.Start == nil {
-		return fmt.Errorf("no open clock-in for %s; run `punch in` first or use `punch set`", date.Format(store.DateLayout))
+		return fmt.Errorf("no open clock-in for %s; run `punch in` first or use `punch set`", date.Format(displayDate))
 	}
 	if day.IsOff {
-		return fmt.Errorf("%s is marked OFF", date.Format(store.DateLayout))
+		return fmt.Errorf("%s is marked OFF", date.Format(displayDate))
 	}
 
 	var end time.Time
@@ -141,7 +141,7 @@ func (a *App) CmdOut(args []string) error {
 	// The bare out-case adds 5 minutes and is intentionally just past "now",
 	// so it is exempt from the future check; literal/explicit times are not.
 	if !bareAdjust && end.After(a.now()) && !*force {
-		return fmt.Errorf("end %s is in the future; pass --force to allow", end.Format("2006-01-02 15:04"))
+		return fmt.Errorf("end %s is in the future; pass --force to allow", end.Format(displayDateTime))
 	}
 	if end.Before(*day.Start) {
 		return fmt.Errorf("end %s is before start %s (overnight shifts are not supported)",
@@ -155,7 +155,7 @@ func (a *App) CmdOut(args []string) error {
 
 	worked := calc.WorkedMinutes(*day.Start, end, day.EffectiveLunch())
 	a.printf("%s clocked out %s at %s — worked %s %s\n",
-		a.styler().Green("✓"), date.Format("Mon 2006-01-02"), a.styler().Bold(end.Format("15:04")),
+		a.styler().Green("✓"), date.Format(displayDateWeekday), a.styler().Bold(end.Format("15:04")),
 		a.styler().Bold(calc.FormatHM(worked)), a.styler().Dim("("+calc.FormatDecimalHours(worked)+")"))
 	if worked > domain.LongDayMinutes {
 		a.errorf("%s that is a very long day (%s)\n", a.styler().Yellow("warning:"), calc.FormatHM(worked))
@@ -240,7 +240,7 @@ func (a *App) CmdSet(args []string) error {
 		return err
 	}
 
-	a.printf("%s set %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"))
+	a.printf("%s set %s\n", a.styler().Green("✓"), date.Format(displayDateWeekday))
 	a.printf("  %s %s\n", a.styler().Dim("before:"), describeDay(before))
 	a.printf("  %s %s\n", a.styler().Dim("after: "), describeDay(newDay))
 
@@ -275,19 +275,19 @@ func (a *App) CmdOff(args []string) error {
 
 	if *clear {
 		if day == nil || !day.IsOff {
-			return fmt.Errorf("%s is not marked OFF", date.Format(store.DateLayout))
+			return fmt.Errorf("%s is not marked OFF", date.Format(displayDate))
 		}
 		// Clearing an off day removes it entirely (it had no work).
 		if _, err := a.Store.DeleteDay(date); err != nil {
 			return err
 		}
-		a.printf("%s cleared OFF on %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"))
+		a.printf("%s cleared OFF on %s\n", a.styler().Green("✓"), date.Format(displayDateWeekday))
 		return nil
 	}
 
 	if day != nil && (day.Start != nil || day.End != nil) {
 		return fmt.Errorf("%s already has worked hours; run `punch clear %s` first",
-			date.Format(store.DateLayout), date.Format("02.01.2006"))
+			date.Format(displayDate), date.Format(displayDate))
 	}
 
 	off := &store.Day{
@@ -298,7 +298,7 @@ func (a *App) CmdOff(args []string) error {
 	if err := a.Store.UpsertDay(off); err != nil {
 		return err
 	}
-	a.printf("%s marked %s %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"), a.styler().Yellow("OFF"))
+	a.printf("%s marked %s %s\n", a.styler().Green("✓"), date.Format(displayDateWeekday), a.styler().Yellow("OFF"))
 	return nil
 }
 
@@ -322,10 +322,10 @@ func (a *App) CmdClear(args []string) error {
 		return err
 	}
 	if !deleted {
-		a.printf("Nothing to clear for %s\n", date.Format("Mon 2006-01-02"))
+		a.printf("Nothing to clear for %s\n", date.Format(displayDateWeekday))
 		return nil
 	}
-	a.printf("%s cleared %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"))
+	a.printf("%s cleared %s\n", a.styler().Green("✓"), date.Format(displayDateWeekday))
 	return nil
 }
 
