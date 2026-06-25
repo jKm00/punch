@@ -59,6 +59,60 @@ The directory is created automatically. The schema is created on first run
 (`PRAGMA journal_mode=WAL`, `PRAGMA foreign_keys=ON`). There is no migration
 framework.
 
+## Development
+
+When working on the tool, run it from source against a **separate dev
+database** so you never touch your real data at `~/.local/share/wh/wh.db`.
+
+### One-time setup
+
+```bash
+cp .env.example .env
+```
+
+`.env` is gitignored and sets `WH_DB=./dev.db` (a repo-local, gitignored
+database). It is loaded **only** by the `make dev*` targets — it is never read
+by the installed `wh` binary, so your production database is unaffected.
+
+> Avoid `export WH_DB=...` in your shell: that variable would leak into the
+> installed `wh` and make it use your dev database too. The `make dev` targets
+> scope `WH_DB` to the dev command only, avoiding this.
+
+### Dev commands
+
+Run any subcommand from source via `make dev ARGS="..."`:
+
+```bash
+make dev ARGS="help"
+make dev ARGS="in"
+make dev ARGS="week last"
+make dev ARGS='set 15.02 --start 08:00 --end 16:00'
+```
+
+Other dev targets:
+
+| Command            | What it does                                              |
+| ------------------ | --------------------------------------------------------- |
+| `make dev ARGS=…`  | Run `go run ./cmd/wh …` against the dev database.         |
+| `make env`         | Print the effective dev env (`ENV_FILE`, `WH_DB`).        |
+| `make dev-db-path` | Print the dev database path `make dev` will use.          |
+| `make dev-reset`   | Delete the dev database (and its `-wal`/`-shm` sidecars). |
+| `make build`       | Build a local `./wh` binary (gitignored).                 |
+| `make test`        | `go test ./...`                                            |
+| `make vet`         | `go vet ./...`                                             |
+| `make tidy`        | `go mod tidy`                                              |
+
+The source entry point lives at `./cmd/wh`, so a bare `go run .` will not work —
+use `make dev` (or `go run ./cmd/wh …`) instead.
+
+If you build a binary for repeated manual dev runs, point it at the dev DB
+explicitly so it doesn't use production:
+
+```bash
+make build
+WH_DB=./dev.db ./wh week
+```
+
 ## Rules & constants
 
 These are hardcoded:

@@ -1,10 +1,13 @@
 # Built binary
 /wh
 
-# Local databases
+# Local databases (incl. dev.db)
 *.db
 *.db-wal
 *.db-shm
+
+# Local dev environment (keep .env.example tracked)
+.env
 
 # OS / editor cruft
 .DS_Store
