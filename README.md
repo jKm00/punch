@@ -93,6 +93,7 @@ wh unlogged                               List past unlogged weeks with worked t
 wh log   [N|last] [--year YYYY]           Mark a week logged.
 wh season [summer|winter]                 Print or set the season.
 wh status                                 Show clock-in state and time so far today.
+wh analytics [YEAR]                       Yearly dashboard (default: current year).
 wh help                                   Usage.
 ```
 
@@ -215,3 +216,17 @@ wh status
 
 Shows today's date and season, whether you are currently clocked in, and how
 much time has accrued today.
+
+### `wh analytics` — yearly dashboard
+
+```sh
+wh analytics                # current year
+wh analytics 2025           # a specific year
+```
+
+Prints a dashboard for the calendar year: totals (days worked, worked vs
+expected, balance, time at lunch), rhythm (average day, average balance,
+average arrival/departure), extremes (longest/shortest day, earliest start,
+latest finish — each with the date), week coverage (active/logged/unlogged),
+and worked-hours bar charts by weekday and by month. Prints a short notice if
+the year has no data.

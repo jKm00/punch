@@ -77,6 +77,12 @@ func (s *Styler) Yellow(text string) string { return s.wrap(codeYellow, text) }
 // Cyan renders text in cyan.
 func (s *Styler) Cyan(text string) string { return s.wrap(codeCyan, text) }
 
+// CyanFn returns Cyan as a function value, for passing to Bar.
+func (s *Styler) CyanFn() func(string) string { return s.Cyan }
+
+// GreenFn returns Green as a function value, for passing to Bar.
+func (s *Styler) GreenFn() func(string) string { return s.Green }
+
 // BoldColor combines bold with one of the color helpers.
 func (s *Styler) BoldColor(color func(string) string, text string) string {
 	return s.Bold(color(text))
@@ -218,6 +224,47 @@ func PadLeft(text string, n int) string {
 
 // VisibleWidth is the exported display width (ANSI-aware).
 func VisibleWidth(text string) int { return visibleWidth(text) }
+
+// Bar renders a horizontal bar of the given fractional fill (0..1) using
+// Unicode block characters, in a field of width cells. The fractional eighth
+// is rendered with a partial block so small differences stay visible. When the
+// styler is enabled the bar is colored with the provided color function.
+func (s *Styler) Bar(fraction float64, width int, color func(string) string) string {
+	if width <= 0 {
+		return ""
+	}
+	if fraction < 0 {
+		fraction = 0
+	}
+	if fraction > 1 {
+		fraction = 1
+	}
+	// Eighth-blocks from empty to full.
+	eighths := []rune{' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉'}
+	full := "█"
+
+	totalEighths := int(fraction*float64(width)*8 + 0.5)
+	fullCells := totalEighths / 8
+	rem := totalEighths % 8
+
+	var b strings.Builder
+	for i := 0; i < fullCells && i < width; i++ {
+		b.WriteString(full)
+	}
+	if fullCells < width && rem > 0 {
+		b.WriteRune(eighths[rem])
+		fullCells++
+	}
+	// Pad the remainder with spaces so bars align in a column.
+	for i := fullCells; i < width; i++ {
+		b.WriteByte(' ')
+	}
+	bar := b.String()
+	if color == nil {
+		return bar
+	}
+	return color(bar)
+}
 
 // Sprintf is a convenience wrapper kept for symmetry with fmt usage in callers.
 func Sprintf(format string, args ...any) string { return fmt.Sprintf(format, args...) }

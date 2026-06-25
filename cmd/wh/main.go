@@ -94,6 +94,8 @@ func run(args []string) error {
 		return a.CmdSeason(rest)
 	case "status":
 		return a.CmdStatus(rest)
+	case "analytics":
+		return a.CmdAnalytics(rest)
 	default:
 		fmt.Fprint(os.Stderr, app.Usage())
 		return fmt.Errorf("unknown command %q", cmd)

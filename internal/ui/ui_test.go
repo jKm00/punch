@@ -119,3 +119,41 @@ func TestBoxWithColoredContentStaysAligned(t *testing.T) {
 		}
 	}
 }
+
+func TestBarWidthAndClamp(t *testing.T) {
+	s := New(false) // no color, easier to measure
+	full := s.Bar(1.0, 10, nil)
+	if VisibleWidth(full) != 10 {
+		t.Errorf("full bar width = %d, want 10", VisibleWidth(full))
+	}
+	if strings.TrimRight(full, "█") != "" {
+		t.Errorf("full bar should be all full blocks, got %q", full)
+	}
+	empty := s.Bar(0, 10, nil)
+	if VisibleWidth(empty) != 10 {
+		t.Errorf("empty bar width = %d, want 10", VisibleWidth(empty))
+	}
+	if strings.TrimSpace(empty) != "" {
+		t.Errorf("empty bar should be blank, got %q", empty)
+	}
+	if VisibleWidth(s.Bar(5, 8, nil)) != 8 {
+		t.Error("over-1 fraction should clamp to full width")
+	}
+	if VisibleWidth(s.Bar(-1, 8, nil)) != 8 {
+		t.Error("negative fraction should clamp to empty width")
+	}
+	if s.Bar(0.5, 0, nil) != "" {
+		t.Error("zero width should yield empty string")
+	}
+}
+
+func TestBarColored(t *testing.T) {
+	s := New(true)
+	out := s.Bar(0.5, 10, s.CyanFn())
+	if !strings.Contains(out, "\x1b[36m") {
+		t.Errorf("colored bar should contain cyan code, got %q", out)
+	}
+	if VisibleWidth(out) != 10 {
+		t.Errorf("colored bar visible width = %d, want 10", VisibleWidth(out))
+	}
+}

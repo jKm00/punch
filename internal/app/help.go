@@ -17,6 +17,7 @@ COMMANDS
   log   [N|last] [--year YYYY]          Mark a week logged (bare = current week).
   season [summer|winter]                Print or set the season.
   status                                Show clock-in state and time so far today.
+  analytics [YEAR]                      Yearly dashboard (default: current year).
   help                                  This help.
 
 DATE FORMATS (day-first European)

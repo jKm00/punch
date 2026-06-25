@@ -68,3 +68,11 @@ func FormatDecimalHours(minutes int) string {
 func FormatClock(hour, minute int) string {
 	return fmt.Sprintf("%02d:%02d", hour, minute)
 }
+
+// FormatClockMinutes renders minutes-since-midnight as "HH:MM".
+func FormatClockMinutes(minutes int) string {
+	if minutes < 0 {
+		minutes = 0
+	}
+	return fmt.Sprintf("%02d:%02d", (minutes/60)%24, minutes%60)
+}
