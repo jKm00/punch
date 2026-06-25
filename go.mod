@@ -1,4 +1,4 @@
-module wh
+module punch
 
 go 1.25
 

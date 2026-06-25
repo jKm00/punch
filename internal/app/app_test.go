@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"wh/internal/domain"
-	"wh/internal/store"
+	"punch/internal/domain"
+	"punch/internal/store"
 )
 
 // fixedNow is the reference "now" used by the test App: a Wednesday at 12:00.

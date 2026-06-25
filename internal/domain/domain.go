@@ -1,4 +1,4 @@
-// Package domain holds the hardcoded constants and core value types for wh.
+// Package domain holds the hardcoded constants and core value types for punch.
 package domain
 
 // Season represents the expected-hours regime in effect.
@@ -21,7 +21,7 @@ const (
 	WinterExpectedMinutes = 7*60 + 30 // 7h30m = 450
 	SummerExpectedMinutes = 7 * 60    // 7h    = 420
 
-	// ClockAdjustMinutes is applied to bare `wh in` (-5) and `wh out` (+5).
+	// ClockAdjustMinutes is applied to bare `punch in` (-5) and `punch out` (+5).
 	ClockAdjustMinutes = 5
 
 	// LongDayMinutes: days worked beyond this trigger a warning (but are allowed).

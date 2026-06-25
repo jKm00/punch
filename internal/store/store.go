@@ -1,4 +1,4 @@
-// Package store wraps the SQLite persistence layer for wh. Each CLI invocation
+// Package store wraps the SQLite persistence layer for punch. Each CLI invocation
 // opens the DB, does its work, and closes it again.
 package store
 
@@ -12,7 +12,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"wh/internal/domain"
+	"punch/internal/domain"
 )
 
 // DateLayout is the ISO date format used for the days.date primary key.
@@ -45,9 +45,12 @@ type Store struct {
 	loc *time.Location
 }
 
-// DefaultPath resolves the DB path, honoring WH_DB, then XDG_DATA_HOME, then
-// ~/.local/share/wh/wh.db.
+// DefaultPath resolves the DB path, honoring PUNCH_DB (then the legacy WH_DB),
+// then XDG_DATA_HOME, then ~/.local/share/punch/punch.db.
 func DefaultPath() (string, error) {
+	if v := os.Getenv("PUNCH_DB"); v != "" {
+		return v, nil
+	}
 	if v := os.Getenv("WH_DB"); v != "" {
 		return v, nil
 	}
@@ -59,7 +62,7 @@ func DefaultPath() (string, error) {
 		}
 		base = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(base, "wh", "wh.db"), nil
+	return filepath.Join(base, "punch", "punch.db"), nil
 }
 
 // Open opens (creating if needed) the SQLite DB at path and ensures the schema

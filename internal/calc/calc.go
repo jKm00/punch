@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"wh/internal/domain"
+	"punch/internal/domain"
 )
 
 // WorkedMinutes returns net worked minutes for a clocked day:

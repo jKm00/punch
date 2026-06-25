@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"wh/internal/calc"
-	"wh/internal/domain"
-	"wh/internal/isoweek"
-	"wh/internal/store"
-	"wh/internal/ui"
+	"punch/internal/calc"
+	"punch/internal/domain"
+	"punch/internal/isoweek"
+	"punch/internal/store"
+	"punch/internal/ui"
 )
 
 // resolveWeek parses the `[N|last]` positional and `--year` flag against the
@@ -106,7 +106,7 @@ func seasonFromExpected(expected int, fallback domain.Season) domain.Season {
 	}
 }
 
-// CmdWeek handles `wh week [N|last] [--year YYYY]`.
+// CmdWeek handles `punch week [N|last] [--year YYYY]`.
 func (a *App) CmdWeek(args []string) error {
 	fs := flag.NewFlagSet("week", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -227,7 +227,7 @@ func (a *App) printWeek(wd *weekData) error {
 	return nil
 }
 
-// CmdUnlogged handles `wh unlogged`.
+// CmdUnlogged handles `punch unlogged`.
 func (a *App) CmdUnlogged(args []string) error {
 	fs := flag.NewFlagSet("unlogged", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -308,7 +308,7 @@ func (a *App) CmdUnlogged(args []string) error {
 	return nil
 }
 
-// CmdLog handles `wh log [N|last] [--year YYYY]`.
+// CmdLog handles `punch log [N|last] [--year YYYY]`.
 func (a *App) CmdLog(args []string) error {
 	fs := flag.NewFlagSet("log", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -346,7 +346,7 @@ func (a *App) CmdLog(args []string) error {
 	return nil
 }
 
-// CmdSeason handles `wh season [summer|winter]`.
+// CmdSeason handles `punch season [summer|winter]`.
 func (a *App) CmdSeason(args []string) error {
 	fs := flag.NewFlagSet("season", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -383,7 +383,7 @@ func logStartClock(s domain.Season) string {
 	return calc.FormatClock(h, m)
 }
 
-// CmdStatus handles `wh status`.
+// CmdStatus handles `punch status`.
 func (a *App) CmdStatus(args []string) error {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
 	fs.SetOutput(a.Err)

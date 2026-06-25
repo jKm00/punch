@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"wh/internal/calc"
-	"wh/internal/domain"
-	"wh/internal/store"
-	"wh/internal/timeparse"
+	"punch/internal/calc"
+	"punch/internal/domain"
+	"punch/internal/store"
+	"punch/internal/timeparse"
 )
 
 // resolveDayAndTime parses an optional leading positional DATE arg and an
@@ -38,7 +38,7 @@ func (a *App) resolveDayAndTime(args []string, atFlag string) (date time.Time, a
 	return date, atTime, nil
 }
 
-// CmdIn handles `wh in`.
+// CmdIn handles `punch in`.
 func (a *App) CmdIn(args []string) error {
 	fs := flag.NewFlagSet("in", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -59,7 +59,7 @@ func (a *App) CmdIn(args []string) error {
 	} else if len(fs.Args()) > 0 {
 		// Explicit DATE without --at: literal now-time-of-day is meaningless;
 		// require --at for a past/explicit date.
-		return fmt.Errorf("a DATE was given without --at; use `wh in %s --at HH:MM` or `wh set`", fs.Args()[0])
+		return fmt.Errorf("a DATE was given without --at; use `punch in %s --at HH:MM` or `punch set`", fs.Args()[0])
 	} else {
 		start = a.now().Add(-domain.ClockAdjustMinutes * time.Minute)
 		bareAdjust = true
@@ -87,10 +87,10 @@ func (a *App) CmdIn(args []string) error {
 		}
 	}
 	if day.IsOff {
-		return fmt.Errorf("%s is marked OFF; run `wh off %s --clear` first", date.Format(store.DateLayout), date.Format("02.01.2006"))
+		return fmt.Errorf("%s is marked OFF; run `punch off %s --clear` first", date.Format(store.DateLayout), date.Format("02.01.2006"))
 	}
 	if day.Start != nil && !*force {
-		return fmt.Errorf("already clocked in at %s on %s; use --force to overwrite or `wh set` to edit",
+		return fmt.Errorf("already clocked in at %s on %s; use --force to overwrite or `punch set` to edit",
 			day.Start.Format("15:04"), date.Format(store.DateLayout))
 	}
 
@@ -102,7 +102,7 @@ func (a *App) CmdIn(args []string) error {
 	return nil
 }
 
-// CmdOut handles `wh out`.
+// CmdOut handles `punch out`.
 func (a *App) CmdOut(args []string) error {
 	fs := flag.NewFlagSet("out", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -121,7 +121,7 @@ func (a *App) CmdOut(args []string) error {
 		return err
 	}
 	if day == nil || day.Start == nil {
-		return fmt.Errorf("no open clock-in for %s; run `wh in` first or use `wh set`", date.Format(store.DateLayout))
+		return fmt.Errorf("no open clock-in for %s; run `punch in` first or use `punch set`", date.Format(store.DateLayout))
 	}
 	if day.IsOff {
 		return fmt.Errorf("%s is marked OFF", date.Format(store.DateLayout))
@@ -132,7 +132,7 @@ func (a *App) CmdOut(args []string) error {
 	if atTime != nil {
 		end = *atTime // literal
 	} else if len(fs.Args()) > 0 {
-		return fmt.Errorf("a DATE was given without --at; use `wh out %s --at HH:MM` or `wh set`", fs.Args()[0])
+		return fmt.Errorf("a DATE was given without --at; use `punch out %s --at HH:MM` or `punch set`", fs.Args()[0])
 	} else {
 		end = a.now().Add(domain.ClockAdjustMinutes * time.Minute)
 		bareAdjust = true
@@ -163,7 +163,7 @@ func (a *App) CmdOut(args []string) error {
 	return nil
 }
 
-// CmdSet handles `wh set DATE --start HH:MM --end HH:MM [--lunch DUR] [--expected DUR]`.
+// CmdSet handles `punch set DATE --start HH:MM --end HH:MM [--lunch DUR] [--expected DUR]`.
 func (a *App) CmdSet(args []string) error {
 	fs := flag.NewFlagSet("set", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -175,7 +175,7 @@ func (a *App) CmdSet(args []string) error {
 		return err
 	}
 	if fs.NArg() < 1 {
-		return fmt.Errorf("usage: wh set DATE --start HH:MM --end HH:MM [--lunch DUR] [--expected DUR]")
+		return fmt.Errorf("usage: punch set DATE --start HH:MM --end HH:MM [--lunch DUR] [--expected DUR]")
 	}
 	if *startStr == "" || *endStr == "" {
 		return fmt.Errorf("--start and --end are required")
@@ -251,7 +251,7 @@ func (a *App) CmdSet(args []string) error {
 	return nil
 }
 
-// CmdOff handles `wh off DATE [--clear]`.
+// CmdOff handles `punch off DATE [--clear]`.
 func (a *App) CmdOff(args []string) error {
 	fs := flag.NewFlagSet("off", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -260,7 +260,7 @@ func (a *App) CmdOff(args []string) error {
 		return err
 	}
 	if fs.NArg() < 1 {
-		return fmt.Errorf("usage: wh off DATE [--clear]")
+		return fmt.Errorf("usage: punch off DATE [--clear]")
 	}
 	date, err := timeparse.ParseDate(fs.Arg(0), a.now())
 	if err != nil {
@@ -286,7 +286,7 @@ func (a *App) CmdOff(args []string) error {
 	}
 
 	if day != nil && (day.Start != nil || day.End != nil) {
-		return fmt.Errorf("%s already has worked hours; run `wh clear %s` first",
+		return fmt.Errorf("%s already has worked hours; run `punch clear %s` first",
 			date.Format(store.DateLayout), date.Format("02.01.2006"))
 	}
 
@@ -302,7 +302,7 @@ func (a *App) CmdOff(args []string) error {
 	return nil
 }
 
-// CmdClear handles `wh clear DATE`.
+// CmdClear handles `punch clear DATE`.
 func (a *App) CmdClear(args []string) error {
 	fs := flag.NewFlagSet("clear", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -310,7 +310,7 @@ func (a *App) CmdClear(args []string) error {
 		return err
 	}
 	if fs.NArg() < 1 {
-		return fmt.Errorf("usage: wh clear DATE")
+		return fmt.Errorf("usage: punch clear DATE")
 	}
 	date, err := timeparse.ParseDate(fs.Arg(0), a.now())
 	if err != nil {

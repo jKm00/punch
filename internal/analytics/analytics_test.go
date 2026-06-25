@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"wh/internal/store"
+	"punch/internal/store"
 )
 
 func tm(t *testing.T, s string) time.Time {

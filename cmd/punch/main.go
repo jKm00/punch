@@ -1,5 +1,5 @@
-// Command wh is a personal work-hour tracker. Each invocation opens the SQLite
-// database, performs one subcommand, and exits.
+// Command punch is a personal work-hour tracker. Each invocation opens the
+// SQLite database, performs one subcommand, and exits.
 package main
 
 import (
@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"wh/internal/app"
-	"wh/internal/store"
-	"wh/internal/ui"
+	"punch/internal/app"
+	"punch/internal/store"
+	"punch/internal/ui"
 )
 
 func main() {

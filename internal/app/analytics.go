@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"wh/internal/analytics"
-	"wh/internal/calc"
-	"wh/internal/isoweek"
-	"wh/internal/ui"
+	"punch/internal/analytics"
+	"punch/internal/calc"
+	"punch/internal/isoweek"
+	"punch/internal/ui"
 )
 
-// CmdAnalytics handles `wh analytics [YEAR]`. With no year it uses the current
+// CmdAnalytics handles `punch analytics [YEAR]`. With no year it uses the current
 // year. It prints a dashboard of computed metrics for that calendar year.
 func (a *App) CmdAnalytics(args []string) error {
 	fs := flag.NewFlagSet("analytics", flag.ContinueOnError)

@@ -1,9 +1,9 @@
 package app
 
-const usageText = `wh — workhour tracker
+const usageText = `punch — workhour tracker
 
 USAGE
-  wh <command> [args] [--no-color]
+  punch <command> [args] [--no-color]
 
 COMMANDS
   in    [DATE] [--at HH:MM] [--force]   Clock in. Bare now-case records (now - 5min).

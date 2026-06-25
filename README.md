@@ -1,6 +1,6 @@
-# wh — workhour tracker
+# punch — workhour tracker
 
-`wh` is a command-line tool for fast work-hour logging: run a command when you
+`punch` is a command-line tool for fast work-hour logging: run a command when you
 arrive, another when you leave, then check a weekly summary to log overtime in
 the company's official app.
 
@@ -9,26 +9,26 @@ the company's official app.
 Requires **Go 1.25+** and `~/.local/bin` on your `$PATH`.
 
 ```sh
-make install      # builds and installs to ~/.local/bin/wh
-wh help           # verify
+make install      # builds and installs to ~/.local/bin/punch
+punch help           # verify
 ```
 
 ## Uninstall
 
 ```sh
-make uninstall    # removes ~/.local/bin/wh (keeps your data)
+make uninstall    # removes ~/.local/bin/punch (keeps your data)
 ```
 
-Your logged hours stay at `~/.local/share/wh/wh.db`. To remove them too:
+Your logged hours stay at `~/.local/share/punch/punch.db`. To remove them too:
 
 ```sh
-rm -rf ~/.local/share/wh
+rm -rf ~/.local/share/punch
 ```
 
 ## Development
 
 Copy the env template, then run from source via `make dev`. `.env` sets
-`WH_DB=./dev.db` so dev runs use a separate, gitignored database.
+`PUNCH_DB=./dev.db` so dev runs use a separate, gitignored database.
 
 ```sh
 cp .env.example .env
@@ -54,11 +54,11 @@ These are hardcoded:
 | Logging range start — summer | 15:30                            |
 | Clock adjustment             | ±5 minutes                       |
 
-- **Clock adjustment:** a bare `wh in` records `now − 5min`; a bare `wh out`
+- **Clock adjustment:** a bare `punch in` records `now − 5min`; a bare `punch out`
   records `now + 5min`. When you pass `--at HH:MM` (or any explicit
   date/time), the time is taken **literally** with no adjustment.
 - **Off days** have expected = 0 and no worked time. Marking a day off that
-  already has worked hours is an error — run `wh clear` first.
+  already has worked hours is an error — run `punch clear` first.
 - **No overnight shifts:** an end before the start is rejected.
 - **Future timestamps** are rejected unless `--force` (the small ±5min bare
   adjustment is exempt).
@@ -83,79 +83,79 @@ Durations (for `--lunch` / `--expected`) accept Go-style durations or `HH:MM`:
 ## Command reference
 
 ```
-wh in    [DATE] [--at HH:MM] [--force]    Clock in (start).
-wh out   [DATE] [--at HH:MM] [--force]    Clock out (end).
-wh set   DATE --start HH:MM --end HH:MM [--lunch DUR] [--expected DUR]
-wh off   DATE [--clear]                   Mark a day off (or clear it).
-wh clear DATE                             Delete a day's record entirely.
-wh week  [N|last] [--year YYYY]           Week summary.
-wh unlogged                               List past unlogged weeks with worked time.
-wh log   [N|last] [--year YYYY]           Mark a week logged.
-wh season [summer|winter]                 Print or set the season.
-wh status                                 Show clock-in state and time so far today.
-wh analytics [YEAR]                       Yearly dashboard (default: current year).
-wh help                                   Usage.
+punch in    [DATE] [--at HH:MM] [--force]    Clock in (start).
+punch out   [DATE] [--at HH:MM] [--force]    Clock out (end).
+punch set   DATE --start HH:MM --end HH:MM [--lunch DUR] [--expected DUR]
+punch off   DATE [--clear]                   Mark a day off (or clear it).
+punch clear DATE                             Delete a day's record entirely.
+punch week  [N|last] [--year YYYY]           Week summary.
+punch unlogged                               List past unlogged weeks with worked time.
+punch log   [N|last] [--year YYYY]           Mark a week logged.
+punch season [summer|winter]                 Print or set the season.
+punch status                                 Show clock-in state and time so far today.
+punch analytics [YEAR]                       Yearly dashboard (default: current year).
+punch help                                   Usage.
 ```
 
-### `wh in` — clock in
+### `punch in` — clock in
 
 Opens the day's start time.
 
 ```sh
-wh in                       # now − 5min, today
-wh in --at 08:30            # today at 08:30 (literal)
-wh in 15.02 --at 08:30      # 15 Feb this year at 08:30 (literal)
-wh in --force               # overwrite an existing start
+punch in                       # now − 5min, today
+punch in --at 08:30            # today at 08:30 (literal)
+punch in 15.02 --at 08:30      # 15 Feb this year at 08:30 (literal)
+punch in --force               # overwrite an existing start
 ```
 
 A bare `DATE` without `--at` is rejected (a past day needs an explicit time —
-use `--at` or `wh set`). Clocking in when already clocked in errors unless
+use `--at` or `punch set`). Clocking in when already clocked in errors unless
 `--force`.
 
-### `wh out` — clock out
+### `punch out` — clock out
 
 Closes the day's end time.
 
 ```sh
-wh out                      # now + 5min, today
-wh out --at 16:15           # today at 16:15 (literal)
-wh out 15.02 --at 16:15     # 15 Feb at 16:15 (literal)
+punch out                      # now + 5min, today
+punch out --at 16:15           # today at 16:15 (literal)
+punch out 15.02 --at 16:15     # 15 Feb at 16:15 (literal)
 ```
 
 Errors if there is no open clock-in for that day.
 
-### `wh set` — backfill / overwrite a day
+### `punch set` — backfill / overwrite a day
 
 ```sh
-wh set 15.02.2026 --start 08:00 --end 16:00
-wh set 15.02 --start 08:00 --end 17:00 --lunch 45m
-wh set today --start 09:00 --end 16:30 --expected 7h
+punch set 15.02.2026 --start 08:00 --end 16:00
+punch set 15.02 --start 08:00 --end 17:00 --lunch 45m
+punch set today --start 09:00 --end 16:30 --expected 7h
 ```
 
 Overwrites the whole day silently but prints a `before → after` diff.
 
-### `wh off` — mark a day off
+### `punch off` — mark a day off
 
 ```sh
-wh off 24.12.2026           # mark off
-wh off 24.12.2026 --clear   # remove the off mark
+punch off 24.12.2026           # mark off
+punch off 24.12.2026 --clear   # remove the off mark
 ```
 
-If the day already has worked hours, run `wh clear` first.
+If the day already has worked hours, run `punch clear` first.
 
-### `wh clear` — delete a day
+### `punch clear` — delete a day
 
 ```sh
-wh clear 15.02.2026
+punch clear 15.02.2026
 ```
 
-### `wh week` — week summary
+### `punch week` — week summary
 
 ```sh
-wh week                     # current week
-wh week last                # previous week
-wh week 26                  # week 26 of the current ISO year
-wh week 26 --year 2026      # week 26 of 2026
+punch week                     # current week
+punch week last                # previous week
+punch week 26                  # week 26 of the current ISO year
+punch week 26 --year 2026      # week 26 of 2026
 ```
 
 ISO-8601 weeks (Monday–Sunday). Shows a per-day breakdown, totals (worked,
@@ -176,52 +176,52 @@ Status:   not logged
 
 The logging range uses the season of the most-recently-worked day in that week.
 
-### `wh unlogged` — pending weeks
+### `punch unlogged` — pending weeks
 
 ```sh
-wh unlogged
+punch unlogged
 ```
 
 Lists past weeks (excluding the current in-progress week) that have worked time
 and have not been logged, oldest-first, with the week number, date range, and
 pending extra.
 
-### `wh log` — mark a week logged
+### `punch log` — mark a week logged
 
 ```sh
-wh log                      # current week
-wh log last                 # previous week
-wh log 26 --year 2026       # specific week
+punch log                      # current week
+punch log last                 # previous week
+punch log 26 --year 2026       # specific week
 ```
 
 Records a "logged at" timestamp. Warns (but still proceeds) for empty or
 current-week logs.
 
-### `wh season` — print or set the season
+### `punch season` — print or set the season
 
 ```sh
-wh season                   # print current season
-wh season summer            # set season to summer
-wh season winter            # set season to winter
+punch season                   # print current season
+punch season summer            # set season to summer
+punch season winter            # set season to winter
 ```
 
 Only affects days created **after** the change (expected hours are snapshotted
 per day).
 
-### `wh status` — current state
+### `punch status` — current state
 
 ```sh
-wh status
+punch status
 ```
 
 Shows today's date and season, whether you are currently clocked in, and how
 much time has accrued today.
 
-### `wh analytics` — yearly dashboard
+### `punch analytics` — yearly dashboard
 
 ```sh
-wh analytics                # current year
-wh analytics 2025           # a specific year
+punch analytics                # current year
+punch analytics 2025           # a specific year
 ```
 
 Prints a dashboard for the calendar year: totals (days worked, worked vs

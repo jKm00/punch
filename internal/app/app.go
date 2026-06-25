@@ -1,4 +1,4 @@
-// Package app implements the wh subcommands on top of the store. It contains
+// Package app implements the punch subcommands on top of the store. It contains
 // the command dispatch and all the user-facing behavior.
 package app
 
@@ -7,8 +7,8 @@ import (
 	"io"
 	"time"
 
-	"wh/internal/store"
-	"wh/internal/ui"
+	"punch/internal/store"
+	"punch/internal/ui"
 )
 
 // App carries the dependencies shared by all command handlers.
@@ -49,8 +49,8 @@ func (a *App) errorf(format string, args ...any) {
 
 // reorderArgs moves any leading positional arguments (those appearing before
 // the first flag token) to the end, so the stdlib flag package — which stops
-// parsing at the first non-flag argument — still sees the flags. wh's grammar
-// only ever places positionals first (e.g. `wh set DATE --start ...`), so this
+// parsing at the first non-flag argument — still sees the flags. punch's grammar
+// only ever places positionals first (e.g. `punch set DATE --start ...`), so this
 // is safe and unambiguous.
 func reorderArgs(args []string) []string {
 	var leading []string

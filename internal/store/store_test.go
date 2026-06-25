@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"wh/internal/domain"
+	"punch/internal/domain"
 )
 
 func openTemp(t *testing.T) *Store {

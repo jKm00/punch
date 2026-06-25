@@ -6,8 +6,8 @@ package analytics
 import (
 	"time"
 
-	"wh/internal/calc"
-	"wh/internal/store"
+	"punch/internal/calc"
+	"punch/internal/store"
 )
 
 // Extreme captures a metric value paired with the date it occurred.

@@ -1,4 +1,4 @@
-// Package ui provides terminal styling for wh: ANSI colors, text attributes,
+// Package ui provides terminal styling for punch: ANSI colors, text attributes,
 // and box-drawing helpers. All styling is gated behind an Enabled flag so the
 // same code path produces clean, plain text when output is piped/redirected,
 // when NO_COLOR is set, or when --no-color is passed.
@@ -11,7 +11,7 @@ import (
 	"unicode/utf8"
 )
 
-// ANSI SGR codes used by wh.
+// ANSI SGR codes used by punch.
 const (
 	codeReset  = "\x1b[0m"
 	codeBold   = "\x1b[1m"

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"wh/internal/domain"
+	"punch/internal/domain"
 )
 
 func at(h, m int) time.Time {

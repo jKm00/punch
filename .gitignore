@@ -1,5 +1,5 @@
 # Built binary
-/wh
+/punch
 
 # Local databases (incl. dev.db)
 *.db
