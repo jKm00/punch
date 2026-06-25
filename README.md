@@ -184,7 +184,7 @@ punch off   DATE [--clear]                   Mark a day off (or clear it).
 punch clear DATE                             Delete a day's record entirely.
 punch week  [N|last] [--year YYYY]           Week summary.
 punch unlogged                               List past unlogged weeks with worked time.
-punch log   [N|last] [--year YYYY]           Mark a week logged.
+punch log   [N|last] [--year YYYY]           Toggle a week's logged state.
 punch season [summer|winter]                 Print or set the season.
 punch setup [--curr]                         Configure punch; --curr prints current config.
 punch status                                 Show clock-in state and time so far today.
@@ -283,16 +283,18 @@ Lists past weeks (excluding the current in-progress week) that have worked time
 and have not been logged, oldest-first, with the week number, date range, and
 pending extra.
 
-### `punch log` — mark a week logged
+### `punch log` — toggle a week's logged state
 
 ```sh
-punch log                      # current week
-punch log last                 # previous week
-punch log 26 --year 2026       # specific week
+punch log                      # toggle current week
+punch log last                 # toggle previous week
+punch log 26 --year 2026       # toggle a specific week
 ```
 
-Records a "logged at" timestamp. Warns (but still proceeds) for empty or
-current-week logs.
+Toggles the week's logged state: an unlogged week is marked logged (recording a
+"logged at" timestamp), and a logged week is unlogged. The output states the
+resulting status. When marking a week logged, it warns (but still proceeds) for
+empty or current-week logs.
 
 ### `punch season` — print or set the season
 

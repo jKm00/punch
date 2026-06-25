@@ -308,7 +308,9 @@ func (a *App) CmdUnlogged(args []string) error {
 	return nil
 }
 
-// CmdLog handles `punch log [N|last] [--year YYYY]`.
+// CmdLog handles `punch log [N|last] [--year YYYY]`. It toggles the logged
+// state of the target week: an unlogged week becomes logged, and a logged week
+// becomes unlogged. The output states the resulting status explicitly.
 func (a *App) CmdLog(args []string) error {
 	fs := flag.NewFlagSet("log", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -330,19 +332,37 @@ func (a *App) CmdLog(args []string) error {
 		return err
 	}
 
+	key := isoweek.Key(year, week)
+	loggedAt, err := a.Store.WeekLoggedAt(key)
+	if err != nil {
+		return err
+	}
+
+	// Already logged → toggle off (unlog).
+	if loggedAt != nil {
+		if err := a.Store.ClearWeekLogged(key); err != nil {
+			return err
+		}
+		a.printf("%s %s is now %s\n",
+			a.styler().Yellow("○"), key, a.styler().Bold("unlogged"))
+		return nil
+	}
+
+	// Not logged → toggle on (log). Warnings only apply when marking logged.
 	curYear, curWeek := isoweek.Of(a.now())
 	if year == curYear && week == curWeek {
 		a.errorf("%s marking the current (in-progress) week as logged\n", a.styler().Yellow("warning:"))
 	}
 	if wd.totalWorked == 0 {
-		a.errorf("%s week %s has no worked time\n", a.styler().Yellow("warning:"), isoweek.Key(year, week))
+		a.errorf("%s week %s has no worked time\n", a.styler().Yellow("warning:"), key)
 	}
 
 	at := a.now()
-	if err := a.Store.SetWeekLogged(isoweek.Key(year, week), at); err != nil {
+	if err := a.Store.SetWeekLogged(key, at); err != nil {
 		return err
 	}
-	a.printf("%s %s logged at %s\n", a.styler().Green("✓"), isoweek.Key(year, week), at.Format(displayDateTime))
+	a.printf("%s %s is now %s (at %s)\n",
+		a.styler().Green("✓"), key, a.styler().Bold("logged"), at.Format(displayDateTime))
 	return nil
 }
 

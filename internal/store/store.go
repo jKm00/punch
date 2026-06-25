@@ -452,6 +452,13 @@ func (s *Store) SetWeekLogged(yearWeek string, at time.Time) error {
 	return err
 }
 
+// ClearWeekLogged removes the logged state for a year-week. It is a no-op if the
+// week was not logged.
+func (s *Store) ClearWeekLogged(yearWeek string) error {
+	_, err := s.db.Exec(`DELETE FROM week_status WHERE year_week = ?`, yearWeek)
+	return err
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1

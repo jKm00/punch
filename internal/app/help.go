@@ -14,7 +14,7 @@ COMMANDS
   clear DATE                            Delete a day's record entirely.
   week  [N|last] [--year YYYY]          Week summary (bare = current week).
   unlogged                              List past unlogged weeks that have worked time.
-  log   [N|last] [--year YYYY]          Mark a week logged (bare = current week).
+  log   [N|last] [--year YYYY]          Toggle a week's logged state (bare = current week).
   season [summer|winter]                Print or set the season.
   setup [--curr]                        Configure punch (expected hours, logging times, lunch, season). --curr prints current config.
   status                                Show clock-in state and time so far today.

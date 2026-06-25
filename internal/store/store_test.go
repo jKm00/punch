@@ -108,6 +108,19 @@ func TestWeekStatus(t *testing.T) {
 	if at == nil || !at.Equal(now) {
 		t.Errorf("logged at = %v, want %v", at, now)
 	}
+
+	// Clearing removes the logged state.
+	if err := st.ClearWeekLogged("2026-W26"); err != nil {
+		t.Fatal(err)
+	}
+	at, _ = st.WeekLoggedAt("2026-W26")
+	if at != nil {
+		t.Errorf("expected unlogged week after clear, got %v", at)
+	}
+	// Clearing an already-unlogged week is a no-op.
+	if err := st.ClearWeekLogged("2026-W26"); err != nil {
+		t.Fatalf("clear no-op: %v", err)
+	}
 }
 
 func TestEarliestWorkedDate(t *testing.T) {

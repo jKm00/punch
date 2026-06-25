@@ -223,3 +223,41 @@ func TestSetLongDayWarning(t *testing.T) {
 		t.Fatal("expected the long day to be saved despite the warning")
 	}
 }
+
+// TestLogToggle verifies that `punch log` toggles a week's logged state: first
+// invocation logs it, second unlogs it, and the output names the resulting
+// state each time. Uses `last` (the previous week) seeded with worked time to
+// avoid the current-week and empty-week warnings.
+func TestLogToggle(t *testing.T) {
+	a, out, _ := newTestApp(t)
+
+	// Seed worked time in the previous week (W25: 15–21 Jun 2026).
+	if err := a.CmdSet([]string{"18.06.2026", "--start", "08:00", "--end", "16:00"}); err != nil {
+		t.Fatalf("CmdSet: %v", err)
+	}
+	out.Reset()
+
+	// First toggle: unlogged → logged.
+	if err := a.CmdLog([]string{"last"}); err != nil {
+		t.Fatalf("CmdLog (log): %v", err)
+	}
+	if got := out.String(); !strings.Contains(got, "logged") || strings.Contains(got, "unlogged") {
+		t.Errorf("first toggle output = %q, want it to say 'logged' (not 'unlogged')", got)
+	}
+	if at, err := a.Store.WeekLoggedAt("2026-W25"); err != nil || at == nil {
+		t.Fatalf("expected week logged after first toggle, at=%v err=%v", at, err)
+	}
+
+	out.Reset()
+
+	// Second toggle: logged → unlogged.
+	if err := a.CmdLog([]string{"last"}); err != nil {
+		t.Fatalf("CmdLog (unlog): %v", err)
+	}
+	if got := out.String(); !strings.Contains(got, "unlogged") {
+		t.Errorf("second toggle output = %q, want it to say 'unlogged'", got)
+	}
+	if at, err := a.Store.WeekLoggedAt("2026-W25"); err != nil || at != nil {
+		t.Fatalf("expected week unlogged after second toggle, at=%v err=%v", at, err)
+	}
+}
