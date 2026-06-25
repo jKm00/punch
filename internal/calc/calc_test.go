@@ -31,26 +31,26 @@ func TestWorkedMinutes(t *testing.T) {
 	}
 }
 
-func TestLoggingEnd(t *testing.T) {
+func TestLogRange(t *testing.T) {
 	tests := []struct {
 		season         domain.Season
 		extra          int
 		wantSH, wantSM int
 		wantEH, wantEM int
 	}{
-		// winter starts 16:00, extra 1h15m -> 17:15
+		// winter end-of-day 16:00, extra 1h15m -> 17:15
 		{domain.Winter, 75, 16, 0, 17, 15},
-		// summer starts 15:30, extra 30m -> 16:00
+		// summer end-of-day 15:30, extra 30m -> 16:00
 		{domain.Summer, 30, 15, 30, 16, 0},
-		// winter starts 16:00, extra 0 -> 16:00
+		// winter end-of-day 16:00, extra 0 -> 16:00
 		{domain.Winter, 0, 16, 0, 16, 0},
-		// summer starts 15:30, extra 2h45m -> 18:15
+		// summer end-of-day 15:30, extra 2h45m -> 18:15
 		{domain.Summer, 165, 15, 30, 18, 15},
 	}
 	for _, tc := range tests {
-		sh, sm, eh, em := LoggingEnd(domain.DefaultConfig(), tc.season, tc.extra)
+		sh, sm, eh, em := LogRange(domain.DefaultConfig(), tc.season, tc.extra)
 		if sh != tc.wantSH || sm != tc.wantSM || eh != tc.wantEH || em != tc.wantEM {
-			t.Errorf("LoggingEnd(%s,%d) = %02d:%02d-%02d:%02d, want %02d:%02d-%02d:%02d",
+			t.Errorf("LogRange(%s,%d) = %02d:%02d-%02d:%02d, want %02d:%02d-%02d:%02d",
 				tc.season, tc.extra, sh, sm, eh, em, tc.wantSH, tc.wantSM, tc.wantEH, tc.wantEM)
 		}
 	}

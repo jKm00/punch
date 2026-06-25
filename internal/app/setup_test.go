@@ -53,8 +53,8 @@ func TestSetupHappyPath(t *testing.T) {
 	stdin := strings.Join([]string{
 		"8h",     // winter expected
 		"7h15m",  // summer expected
-		"16:30",  // winter logging start
-		"15:00",  // summer logging start
+		"16:30",  // winter end of day
+		"15:00",  // summer end of day
 		"45m",    // default lunch
 		"summer", // season
 	}, "\n") + "\n"
@@ -83,11 +83,11 @@ func TestSetupHappyPath(t *testing.T) {
 	if cfg.SummerExpectedMinutes != 7*60+15 {
 		t.Errorf("summer expected = %d, want %d", cfg.SummerExpectedMinutes, 7*60+15)
 	}
-	if cfg.WinterLoggingStart != (domain.TimeOfDay{Hour: 16, Minute: 30}) {
-		t.Errorf("winter logging start = %+v, want 16:30", cfg.WinterLoggingStart)
+	if cfg.WinterEndOfDay != (domain.TimeOfDay{Hour: 16, Minute: 30}) {
+		t.Errorf("winter end of day = %+v, want 16:30", cfg.WinterEndOfDay)
 	}
-	if cfg.SummerLoggingStart != (domain.TimeOfDay{Hour: 15, Minute: 0}) {
-		t.Errorf("summer logging start = %+v, want 15:00", cfg.SummerLoggingStart)
+	if cfg.SummerEndOfDay != (domain.TimeOfDay{Hour: 15, Minute: 0}) {
+		t.Errorf("summer end of day = %+v, want 15:00", cfg.SummerEndOfDay)
 	}
 	if cfg.DefaultLunchMinutes != 45 {
 		t.Errorf("default lunch = %d, want 45", cfg.DefaultLunchMinutes)
@@ -211,8 +211,8 @@ func TestSetupRerunUsesHardcodedDefaults(t *testing.T) {
 	seed := domain.Config{
 		WinterExpectedMinutes: 8 * 60,
 		SummerExpectedMinutes: 6*60 + 30,
-		WinterLoggingStart:    domain.TimeOfDay{Hour: 17, Minute: 15},
-		SummerLoggingStart:    domain.TimeOfDay{Hour: 14, Minute: 45},
+		WinterEndOfDay:        domain.TimeOfDay{Hour: 17, Minute: 15},
+		SummerEndOfDay:        domain.TimeOfDay{Hour: 14, Minute: 45},
 		DefaultLunchMinutes:   60,
 	}
 	if err := st.SaveConfig(seed, domain.Summer); err != nil {
@@ -229,8 +229,8 @@ func TestSetupRerunUsesHardcodedDefaults(t *testing.T) {
 	wantPrompts := []string{
 		"[" + calc.FormatHM(def.WinterExpectedMinutes) + "]",
 		"[" + calc.FormatHM(def.SummerExpectedMinutes) + "]",
-		"[" + calc.FormatClock(def.WinterLoggingStart.Hour, def.WinterLoggingStart.Minute) + "]",
-		"[" + calc.FormatClock(def.SummerLoggingStart.Hour, def.SummerLoggingStart.Minute) + "]",
+		"[" + calc.FormatClock(def.WinterEndOfDay.Hour, def.WinterEndOfDay.Minute) + "]",
+		"[" + calc.FormatClock(def.SummerEndOfDay.Hour, def.SummerEndOfDay.Minute) + "]",
 		"[" + calc.FormatHM(def.DefaultLunchMinutes) + "]",
 		"[" + string(domain.DefaultSeason) + "]",
 	}
@@ -282,8 +282,8 @@ func TestSetupCurrPrintsConfig(t *testing.T) {
 	seed := domain.Config{
 		WinterExpectedMinutes: 8 * 60,
 		SummerExpectedMinutes: 6*60 + 30,
-		WinterLoggingStart:    domain.TimeOfDay{Hour: 17, Minute: 15},
-		SummerLoggingStart:    domain.TimeOfDay{Hour: 14, Minute: 45},
+		WinterEndOfDay:        domain.TimeOfDay{Hour: 17, Minute: 15},
+		SummerEndOfDay:        domain.TimeOfDay{Hour: 14, Minute: 45},
 		DefaultLunchMinutes:   60,
 	}
 	if err := st.SaveConfig(seed, domain.Summer); err != nil {

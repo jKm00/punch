@@ -62,8 +62,8 @@ func (a *App) printConfig(cfg domain.Config, season domain.Season) {
 	a.printf("  %-28s %s\n", "Current season", s.Bold(string(season)))
 	a.printf("  %-28s %s\n", "Winter expected/day", calc.FormatHM(cfg.WinterExpectedMinutes))
 	a.printf("  %-28s %s\n", "Summer expected/day", calc.FormatHM(cfg.SummerExpectedMinutes))
-	a.printf("  %-28s %s\n", "Winter logging start", calc.FormatClock(cfg.WinterLoggingStart.Hour, cfg.WinterLoggingStart.Minute))
-	a.printf("  %-28s %s\n", "Summer logging start", calc.FormatClock(cfg.SummerLoggingStart.Hour, cfg.SummerLoggingStart.Minute))
+	a.printf("  %-28s %s\n", "Typical end of day (winter)", calc.FormatClock(cfg.WinterEndOfDay.Hour, cfg.WinterEndOfDay.Minute))
+	a.printf("  %-28s %s\n", "Typical end of day (summer)", calc.FormatClock(cfg.SummerEndOfDay.Hour, cfg.SummerEndOfDay.Minute))
 	a.printf("  %-28s %s\n", "Default lunch", calc.FormatHM(cfg.DefaultLunchMinutes))
 }
 
@@ -95,17 +95,17 @@ func (a *App) runWizard(defaults domain.Config, defaultSeason domain.Season) (do
 	}
 	cfg.SummerExpectedMinutes = summerExpected
 
-	winterStart, err := a.promptTimeOfDay(sc, "Winter logging start time", defaults.WinterLoggingStart)
+	winterEnd, err := a.promptTimeOfDay(sc, "Typical end of day (winter)", defaults.WinterEndOfDay)
 	if err != nil {
 		return domain.Config{}, "", err
 	}
-	cfg.WinterLoggingStart = winterStart
+	cfg.WinterEndOfDay = winterEnd
 
-	summerStart, err := a.promptTimeOfDay(sc, "Summer logging start time", defaults.SummerLoggingStart)
+	summerEnd, err := a.promptTimeOfDay(sc, "Typical end of day (summer)", defaults.SummerEndOfDay)
 	if err != nil {
 		return domain.Config{}, "", err
 	}
-	cfg.SummerLoggingStart = summerStart
+	cfg.SummerEndOfDay = summerEnd
 
 	lunch, err := a.promptDuration(sc, "Default lunch break in minutes", defaults.DefaultLunchMinutes)
 	if err != nil {

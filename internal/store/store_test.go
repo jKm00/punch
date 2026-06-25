@@ -141,3 +141,52 @@ func TestEarliestWorkedDate(t *testing.T) {
 		t.Errorf("earliest = %v, want 2026-06-22", got)
 	}
 }
+
+// TestLegacyLoggingStartKeysMigrated verifies the one-time key rename: values
+// stored under the legacy winter_logging_start / summer_logging_start keys are
+// migrated to winter_end_of_day / summer_end_of_day on the next Open, so a
+// user's custom values are preserved (not silently reset to defaults).
+func TestLegacyLoggingStartKeysMigrated(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "wh.db")
+
+	// First open: seed values under the legacy keys, simulating an older DB.
+	st, err := Open(path, time.UTC)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	if err := st.setSetting("winter_logging_start", "17:15"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.setSetting("summer_logging_start", "14:45"); err != nil {
+		t.Fatal(err)
+	}
+	st.Close()
+
+	// Re-open: migrate() should rename the keys in place.
+	st2, err := Open(path, time.UTC)
+	if err != nil {
+		t.Fatalf("re-open: %v", err)
+	}
+	t.Cleanup(func() { st2.Close() })
+
+	// The values must now resolve under the new keys.
+	cfg, err := st2.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WinterEndOfDay != (domain.TimeOfDay{Hour: 17, Minute: 15}) {
+		t.Errorf("winter end of day = %+v, want 17:15 (migrated from legacy key)", cfg.WinterEndOfDay)
+	}
+	if cfg.SummerEndOfDay != (domain.TimeOfDay{Hour: 14, Minute: 45}) {
+		t.Errorf("summer end of day = %+v, want 14:45 (migrated from legacy key)", cfg.SummerEndOfDay)
+	}
+
+	// The legacy keys must no longer exist.
+	if _, ok, _ := st2.getSetting("winter_logging_start"); ok {
+		t.Error("legacy winter_logging_start key should have been renamed away")
+	}
+	if _, ok, _ := st2.getSetting("summer_logging_start"); ok {
+		t.Error("legacy summer_logging_start key should have been renamed away")
+	}
+}

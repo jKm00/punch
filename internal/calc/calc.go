@@ -23,12 +23,14 @@ func WorkedMinutes(start, end time.Time, lunchMinutes int) int {
 	return net
 }
 
-// LoggingEnd computes the official-app logging end time given the season's
-// start time (resolved from cfg) and the weekly extra (overtime) in minutes. It
-// returns the start and end hour/minute. Extra is assumed > 0; the result may
-// roll past midnight in which case hour is taken modulo 24.
-func LoggingEnd(cfg domain.Config, s domain.Season, extraMinutes int) (startHour, startMin, endHour, endMin int) {
-	startHour, startMin = cfg.LoggingStartFor(s)
+// LogRange computes the suggested weekly logging range to enter in the
+// company's work-hour app: it anchors at the season's typical end-of-day
+// (departure) time (resolved from cfg) and extends by the weekly extra
+// (overtime) in minutes, returning the start and end hour/minute. Extra is
+// assumed > 0; the result may roll past midnight in which case hour is taken
+// modulo 24.
+func LogRange(cfg domain.Config, s domain.Season, extraMinutes int) (startHour, startMin, endHour, endMin int) {
+	startHour, startMin = cfg.EndOfDayFor(s)
 	total := startHour*60 + startMin + extraMinutes
 	endHour = (total / 60) % 24
 	endMin = total % 60

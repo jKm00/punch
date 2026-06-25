@@ -23,15 +23,9 @@ curl -fsSL https://raw.githubusercontent.com/jKm00/punch/main/install.sh | bash
 punch version
 ```
 
-**Step 3 — configure** punch (expected hours, logging times, lunch, season):
-
-```sh
-punch setup
-```
-
-Then run `punch help` any time for usage. The setup wizard also runs
-automatically the first time you use `punch` on an interactive terminal, so you
-can skip Step 3 and just start logging if the defaults suit you.
+That's it — `punch` runs on a default config (no setup required). Run
+`punch setup --curr` to see it, `punch setup` to change it, and `punch help` for
+usage.
 
 ### Build from source
 
@@ -40,7 +34,6 @@ Requires **Go 1.25+**:
 ```sh
 make install           # builds and installs to ~/.local/bin/punch
 punch version          # verify
-punch setup            # configure (expected hours, logging times, lunch, season)
 punch help             # usage
 ```
 
@@ -115,37 +108,29 @@ Users then get the upgrade notice and can run `punch upgrade`.
 
 ## Configuration
 
-`punch` ships with sensible defaults but lets you tailor the values that matter
-most. A short setup wizard runs **automatically on first use** (the first time
-you run any database-backed command on an interactive terminal) and is
-**re-runnable any time** with:
+`punch` runs on a built-in default config — **no setup required**. To see the
+values currently in effect:
+
+```sh
+punch setup --curr
+```
+
+To change them, run the setup wizard:
 
 ```sh
 punch setup
 ```
 
-The wizard configures:
+It configures the **expected hours per day** (winter/summer), the **typical end
+of day** (winter/summer — the time you normally leave, used to anchor the
+suggested weekly logging range in `punch week`), the **default lunch break**,
+and the **current season**. Each prompt shows the recommended default in
+brackets — press **Enter** to accept it. Values are stored alongside your hours
+and persist across runs; the wizard always offers the built-in defaults, so
+accepting every prompt resets to the recommendations. See the default values in
+[Rules & constants](#rules--constants).
 
-- **Winter / summer expected hours per day** (defaults `7h30m` / `7h`)
-- **Winter / summer logging start time** (defaults `16:00` / `15:30`)
-- **Default lunch break** (default `30m`, deducted on every clocked day)
-- **Current season** (`summer` or `winter`)
-
-For every prompt the **recommended default** is shown in brackets — press
-**Enter** to accept it. Values are stored in the same SQLite database as your
-hours, so they persist across runs. The wizard always offers the built-in
-recommended defaults (not your stored values), so re-running it and accepting
-every prompt resets your configuration back to the recommendations.
-
-Notes:
-
-- Each value falls back to its built-in default if you never run the wizard,
-  so existing setups keep working unchanged.
-- When stdin is **not** an interactive terminal (piped or scripted), the
-  first-run wizard is skipped silently and the defaults are used — `punch` stays
-  scriptable.
-- `punch season` still works on its own and writes the same season setting as
-  the wizard.
+`punch season` also writes the same season setting on its own.
 
 ## Rules & constants
 
@@ -158,8 +143,8 @@ threshold are not configurable.
 | Default lunch                | 30m (deducted every clocked day) | yes          |
 | Expected per day — winter    | 7h30m                            | yes          |
 | Expected per day — summer    | 7h                               | yes          |
-| Logging range start — winter | 16:00                            | yes          |
-| Logging range start — summer | 15:30                            | yes          |
+| Typical end of day — winter  | 16:00                            | yes          |
+| Typical end of day — summer  | 15:30                            | yes          |
 | Clock adjustment             | ±5 minutes                       | no           |
 
 - **Clock adjustment:** a bare `punch in` records `now − 5min`; a bare `punch out`
@@ -285,7 +270,12 @@ Log:      15:30–17:00  (extra 1h30m, summer season)
 Status:   not logged
 ```
 
-The logging range uses the season of the most-recently-worked day in that week.
+The `Log:` line is the suggested time range to enter in your company's
+work-hour app (which takes a *from* and *to* time) to record the week's whole
+overtime balance in one go — e.g. on Friday. It is anchored at your **typical
+end of day** for the season (configurable via `punch setup`) and extended by the
+weekly balance, using the season of the most-recently-worked day in that week.
+So with a 1h30m balance and a 15:30 summer end-of-day, you'd log `15:30–17:00`.
 
 ### `punch unlogged` — pending weeks
 
@@ -328,13 +318,13 @@ punch setup                    # re-run the configuration wizard
 punch setup --curr             # print the current configuration (no prompts)
 ```
 
-Walks through the configurable values (expected hours per season, logging start
-times, default lunch, and the current season), showing the **recommended
-default** as the `[default]` for each prompt — press Enter to accept it. The
-wizard always offers the built-in recommended defaults, even if you have custom
-values stored, so re-running it lets you reset toward the recommendations. The
-wizard also runs automatically the first time you use `punch` on an interactive
-terminal. Use `--curr` to print the currently-effective configuration without
+Walks through the configurable values (expected hours per season, typical
+end-of-day times, default lunch, and the current season), showing the
+**recommended default** as the `[default]` for each prompt — press Enter to
+accept it. The wizard always offers the built-in recommended defaults, even if
+you have custom values stored, so re-running it lets you reset toward the
+recommendations. Setup is optional — `punch` uses the defaults until you run
+this. Use `--curr` to print the currently-effective configuration without
 prompting or changing anything. See [Configuration](#configuration) for details.
 
 ### `punch status` — current state

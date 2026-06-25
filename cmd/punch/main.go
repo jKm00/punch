@@ -102,14 +102,6 @@ func run(args []string) error {
 	}
 	a.Config = cfg
 
-	// First-run auto-wizard: when setup has never been completed and stdin is
-	// an interactive terminal, run the wizard before dispatching the user's
-	// command. The commands handled before the DB opens (help/version/upgrade)
-	// are already exempt; every DB-backed command triggers this.
-	if err := maybeRunFirstRunSetup(a, cmd); err != nil {
-		return err
-	}
-
 	runErr := dispatch(a, cmd, rest)
 
 	// Refresh the cached latest-version (at most once/day) without delaying the
@@ -118,33 +110,6 @@ func run(args []string) error {
 	backgroundRefresh()
 
 	return runErr
-}
-
-// maybeRunFirstRunSetup launches the setup wizard before command dispatch when
-// setup has not been completed and stdin is an interactive terminal. When setup
-// is incomplete but stdin is not a TTY (piped/scripted), it silently skips the
-// wizard and the resolved defaults remain in effect. On a successful run it
-// prints "Setup complete." (via CmdSetup) and leaves a.Config refreshed so the
-// original command runs with the new values. An aborted wizard returns an error
-// so the caller does not run the original command.
-//
-// The explicit `setup` command is exempt — it runs the wizard itself via
-// dispatch.
-func maybeRunFirstRunSetup(a *app.App, cmd string) error {
-	if cmd == "setup" {
-		return nil
-	}
-	done, err := a.Store.SetupCompleted()
-	if err != nil {
-		return err
-	}
-	if done {
-		return nil
-	}
-	if !app.IsInteractive(a.In) {
-		return nil
-	}
-	return a.CmdSetup(nil)
 }
 
 func dispatch(a *app.App, cmd string, rest []string) error {

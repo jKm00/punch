@@ -16,7 +16,7 @@ COMMANDS
   unlogged                              List past unlogged weeks that have worked time.
   log   [N|last] [--year YYYY]          Toggle a week's logged state (bare = current week).
   season [summer|winter]                Print or set the season.
-  setup [--curr]                        Configure punch (expected hours, logging times, lunch, season). --curr prints current config.
+  setup [--curr]                        Configure punch (expected hours, end-of-day times, lunch, season). --curr prints current config.
   status                                Show clock-in state and time so far today.
   analytics [YEAR]                      Yearly dashboard (default: current year).
   version                               Print the installed version.
@@ -30,7 +30,7 @@ DATE FORMATS (day-first European)
 RULES & CONSTANTS
   Lunch default 30m (deducted every clocked day).
   Expected/day: winter 7h30m, summer 7h.
-  Logging range starts: winter 16:00, summer 15:30.
+  Typical end of day: winter 16:00, summer 15:30 (anchors the weekly log range).
   Clock adjustment ±5min on bare in/out. --at and explicit times are literal.
   No overnight shifts. Future times require --force.
 

@@ -203,7 +203,7 @@ func (a *App) printWeek(wd *weekData) error {
 		s.Bold("Balance ")+" "+ui.PadRight(s.Balance(balance, calc.FormatHM(balance)), 9)+s.Dim("("+calc.FormatDecimalHours(balance)+")"))
 
 	if balance > 0 {
-		sh, sm, eh, em := calc.LoggingEnd(a.Config, wd.lastWorkedSeason, balance)
+		sh, sm, eh, em := calc.LogRange(a.Config, wd.lastWorkedSeason, balance)
 		lines = append(lines, s.Green(fmt.Sprintf("Log     %s–%s",
 			calc.FormatClock(sh, sm), calc.FormatClock(eh, em)))+
 			s.Dim(fmt.Sprintf("  (extra %s, %s season)", calc.FormatHM(balance), wd.lastWorkedSeason)))
@@ -389,17 +389,17 @@ func (a *App) CmdSeason(args []string) error {
 		}
 		a.printf("%s season set to %s %s\n",
 			a.styler().Green("✓"), a.styler().Bold(arg),
-			a.styler().Dim(fmt.Sprintf("(expected %s/day, logging starts %s)",
+			a.styler().Dim(fmt.Sprintf("(expected %s/day, typical end of day %s)",
 				calc.FormatHM(a.Config.ExpectedMinutesFor(domain.Season(arg))),
-				a.logStartClock(domain.Season(arg)))))
+				a.endOfDayClock(domain.Season(arg)))))
 		return nil
 	default:
 		return fmt.Errorf("invalid season %q: use `summer` or `winter`", arg)
 	}
 }
 
-func (a *App) logStartClock(s domain.Season) string {
-	h, m := a.Config.LoggingStartFor(s)
+func (a *App) endOfDayClock(s domain.Season) string {
+	h, m := a.Config.EndOfDayFor(s)
 	return calc.FormatClock(h, m)
 }
 

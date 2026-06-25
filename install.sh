@@ -176,15 +176,22 @@ main() {
   info ""
   info "Installed punch ${tag} to ${INSTALL_DIR}/${BINARY}"
 
+  print_getting_started() {
+    info ""
+    info "Using the default config — run 'punch setup --curr' to see it, or 'punch setup' to change it."
+    info "Run 'punch help' for usage."
+  }
+
   case ":${PATH}:" in
     *":${INSTALL_DIR}:"*)
-      info "Next: run 'punch setup' to configure punch, then 'punch help' for usage."
+      print_getting_started
       ;;
     *)
       info ""
       info "NOTE: ${INSTALL_DIR} is not on your PATH. Add this to your shell profile:"
       info "    export PATH=\"${INSTALL_DIR}:\$PATH\""
-      info "Then restart your shell, run 'punch setup' to configure punch, and 'punch help' for usage."
+      info "Then restart your shell."
+      print_getting_started
       ;;
   esac
 }

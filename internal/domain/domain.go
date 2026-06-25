@@ -30,17 +30,18 @@ const (
 	LongDayMinutes = 16 * 60
 )
 
-// Default logging-start times by season (the earliest wall-clock time at which
-// logging is expected). These are fallbacks when not configured.
+// Default typical end-of-day (departure) times by season — the wall-clock time
+// you normally leave work. Used as the anchor for the suggested weekly logging
+// range. These are fallbacks when not configured.
 const (
-	WinterLoggingStartHour   = 16
-	WinterLoggingStartMinute = 0
-	SummerLoggingStartHour   = 15
-	SummerLoggingStartMinute = 30
+	WinterEndOfDayHour   = 16
+	WinterEndOfDayMinute = 0
+	SummerEndOfDayHour   = 15
+	SummerEndOfDayMinute = 30
 )
 
-// TimeOfDay is a wall-clock hour:minute, used for configurable logging-start
-// times.
+// TimeOfDay is a wall-clock hour:minute, used for the configurable typical
+// end-of-day times.
 type TimeOfDay struct {
 	Hour   int
 	Minute int
@@ -53,8 +54,8 @@ type TimeOfDay struct {
 type Config struct {
 	WinterExpectedMinutes int
 	SummerExpectedMinutes int
-	WinterLoggingStart    TimeOfDay
-	SummerLoggingStart    TimeOfDay
+	WinterEndOfDay        TimeOfDay
+	SummerEndOfDay        TimeOfDay
 	DefaultLunchMinutes   int
 }
 
@@ -64,8 +65,8 @@ func DefaultConfig() Config {
 	return Config{
 		WinterExpectedMinutes: WinterExpectedMinutes,
 		SummerExpectedMinutes: SummerExpectedMinutes,
-		WinterLoggingStart:    TimeOfDay{Hour: WinterLoggingStartHour, Minute: WinterLoggingStartMinute},
-		SummerLoggingStart:    TimeOfDay{Hour: SummerLoggingStartHour, Minute: SummerLoggingStartMinute},
+		WinterEndOfDay:        TimeOfDay{Hour: WinterEndOfDayHour, Minute: WinterEndOfDayMinute},
+		SummerEndOfDay:        TimeOfDay{Hour: SummerEndOfDayHour, Minute: SummerEndOfDayMinute},
 		DefaultLunchMinutes:   DefaultLunchMinutes,
 	}
 }
@@ -79,13 +80,13 @@ func (cfg Config) ExpectedMinutesFor(s Season) int {
 	return cfg.WinterExpectedMinutes
 }
 
-// LoggingStartFor returns the season's logging start time as an hour and
-// minute (the earliest wall-clock time at which logging is expected).
-func (cfg Config) LoggingStartFor(s Season) (hour, minute int) {
+// EndOfDayFor returns the season's typical end-of-day (departure) time as an
+// hour and minute — the anchor for the suggested weekly logging range.
+func (cfg Config) EndOfDayFor(s Season) (hour, minute int) {
 	if s == Summer {
-		return cfg.SummerLoggingStart.Hour, cfg.SummerLoggingStart.Minute
+		return cfg.SummerEndOfDay.Hour, cfg.SummerEndOfDay.Minute
 	}
-	return cfg.WinterLoggingStart.Hour, cfg.WinterLoggingStart.Minute
+	return cfg.WinterEndOfDay.Hour, cfg.WinterEndOfDay.Minute
 }
 
 // Normalize coerces an arbitrary season string to a known Season, defaulting

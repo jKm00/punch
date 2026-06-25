@@ -119,6 +119,18 @@ CREATE TABLE IF NOT EXISTS settings (
 	if err != nil {
 		return fmt.Errorf("migrate: %w", err)
 	}
+	// One-time rename: the logging-start settings keys were renamed to
+	// end-of-day to match the configured value's true meaning (the typical
+	// departure time). Rename in place so existing custom values are preserved.
+	// Idempotent: a no-op once renamed, and harmless if the old keys never
+	// existed.
+	const renameKeys = `
+UPDATE OR IGNORE settings SET key = 'winter_end_of_day' WHERE key = 'winter_logging_start';
+UPDATE OR IGNORE settings SET key = 'summer_end_of_day' WHERE key = 'summer_logging_start';
+`
+	if _, err := s.db.Exec(renameKeys); err != nil {
+		return fmt.Errorf("migrate (rename keys): %w", err)
+	}
 	return nil
 }
 
@@ -132,8 +144,8 @@ const seasonKey = "season"
 const (
 	winterExpectedMinutesKey = "winter_expected_minutes"
 	summerExpectedMinutesKey = "summer_expected_minutes"
-	winterLoggingStartKey    = "winter_logging_start"
-	summerLoggingStartKey    = "summer_logging_start"
+	winterEndOfDayKey        = "winter_end_of_day"
+	summerEndOfDayKey        = "summer_end_of_day"
 	defaultLunchMinutesKey   = "default_lunch_minutes"
 
 	// setupCompletedKey is the sentinel written LAST after a successful setup
@@ -178,8 +190,8 @@ func (s *Store) SaveConfig(cfg domain.Config, season domain.Season) error {
 	writes := []struct{ key, value string }{
 		{winterExpectedMinutesKey, strconv.Itoa(cfg.WinterExpectedMinutes)},
 		{summerExpectedMinutesKey, strconv.Itoa(cfg.SummerExpectedMinutes)},
-		{winterLoggingStartKey, formatTimeOfDay(cfg.WinterLoggingStart)},
-		{summerLoggingStartKey, formatTimeOfDay(cfg.SummerLoggingStart)},
+		{winterEndOfDayKey, formatTimeOfDay(cfg.WinterEndOfDay)},
+		{summerEndOfDayKey, formatTimeOfDay(cfg.SummerEndOfDay)},
 		{defaultLunchMinutesKey, strconv.Itoa(cfg.DefaultLunchMinutes)},
 		{seasonKey, string(season)},
 	}
@@ -213,18 +225,18 @@ func (s *Store) LoadConfig() (domain.Config, error) {
 			cfg.SummerExpectedMinutes = n
 		}
 	}
-	if v, ok, err := s.getSetting(winterLoggingStartKey); err != nil {
+	if v, ok, err := s.getSetting(winterEndOfDayKey); err != nil {
 		return cfg, err
 	} else if ok {
 		if tod, perr := parseTimeOfDay(v); perr == nil {
-			cfg.WinterLoggingStart = tod
+			cfg.WinterEndOfDay = tod
 		}
 	}
-	if v, ok, err := s.getSetting(summerLoggingStartKey); err != nil {
+	if v, ok, err := s.getSetting(summerEndOfDayKey); err != nil {
 		return cfg, err
 	} else if ok {
 		if tod, perr := parseTimeOfDay(v); perr == nil {
-			cfg.SummerLoggingStart = tod
+			cfg.SummerEndOfDay = tod
 		}
 	}
 	if v, ok, err := s.getSetting(defaultLunchMinutesKey); err != nil {
