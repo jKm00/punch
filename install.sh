@@ -178,13 +178,13 @@ main() {
 
   case ":${PATH}:" in
     *":${INSTALL_DIR}:"*)
-      info "Run 'punch help' to get started."
+      info "Next: run 'punch setup' to configure punch, then 'punch help' for usage."
       ;;
     *)
       info ""
       info "NOTE: ${INSTALL_DIR} is not on your PATH. Add this to your shell profile:"
       info "    export PATH=\"${INSTALL_DIR}:\$PATH\""
-      info "Then restart your shell and run 'punch help'."
+      info "Then restart your shell, run 'punch setup' to configure punch, and 'punch help' for usage."
       ;;
   esac
 }

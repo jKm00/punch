@@ -8,19 +8,30 @@ the company's official app.
 
 ### Install script (recommended)
 
-Run this one-liner — it detects your OS/arch, downloads the latest release,
-verifies the checksum, and installs `punch` to `~/.local/bin`:
+**Step 1 — install.** Run this one-liner — it detects your OS/arch, downloads
+the latest release, verifies the checksum, and installs `punch` to
+`~/.local/bin` (it warns you if `~/.local/bin` isn't on your `$PATH` and tells
+you how to fix it):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jKm00/punch/main/install.sh | bash
 ```
 
-The script warns you if `~/.local/bin` isn't on your `$PATH` and tells you how
-to fix it. Afterwards:
+**Step 2 — verify** the install:
 
 ```sh
-punch help
+punch version
 ```
+
+**Step 3 — configure** punch (expected hours, logging times, lunch, season):
+
+```sh
+punch setup
+```
+
+Then run `punch help` any time for usage. The setup wizard also runs
+automatically the first time you use `punch` on an interactive terminal, so you
+can skip Step 3 and just start logging if the defaults suit you.
 
 ### Build from source
 
@@ -28,7 +39,9 @@ Requires **Go 1.25+**:
 
 ```sh
 make install           # builds and installs to ~/.local/bin/punch
-punch help
+punch version          # verify
+punch setup            # configure (expected hours, logging times, lunch, season)
+punch help             # usage
 ```
 
 ## Upgrading
