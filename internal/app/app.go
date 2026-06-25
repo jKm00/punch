@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"wh/internal/store"
+	"wh/internal/ui"
 )
 
 // App carries the dependencies shared by all command handlers.
@@ -17,6 +18,16 @@ type App struct {
 	Loc   *time.Location
 	Out   io.Writer
 	Err   io.Writer
+	UI    *ui.Styler
+}
+
+// styler returns the App's styler, defaulting to a disabled (plain) styler when
+// none was provided (e.g. in tests).
+func (a *App) styler() *ui.Styler {
+	if a.UI == nil {
+		return ui.New(false)
+	}
+	return a.UI
 }
 
 // now returns the current time in the app's location.

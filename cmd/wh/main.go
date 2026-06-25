@@ -9,6 +9,7 @@ import (
 
 	"wh/internal/app"
 	"wh/internal/store"
+	"wh/internal/ui"
 )
 
 func main() {
@@ -18,7 +19,25 @@ func main() {
 	}
 }
 
+// extractNoColor removes a global `--no-color` (or `--color=false`) token from
+// anywhere in args and reports whether it was present. Keeping it global means
+// it works regardless of subcommand position.
+func extractNoColor(args []string) ([]string, bool) {
+	out := make([]string, 0, len(args))
+	found := false
+	for _, a := range args {
+		if a == "--no-color" || a == "-no-color" {
+			found = true
+			continue
+		}
+		out = append(out, a)
+	}
+	return out, found
+}
+
 func run(args []string) error {
+	args, noColor := extractNoColor(args)
+
 	if len(args) == 0 {
 		fmt.Fprint(os.Stdout, app.Usage())
 		return nil
@@ -43,12 +62,15 @@ func run(args []string) error {
 	}
 	defer st.Close()
 
+	colorOn := ui.ShouldEnable(os.Stdout, noColor)
+
 	a := &app.App{
 		Store: st,
 		Now:   time.Now,
 		Loc:   loc,
 		Out:   os.Stdout,
 		Err:   os.Stderr,
+		UI:    ui.New(colorOn),
 	}
 
 	switch cmd {

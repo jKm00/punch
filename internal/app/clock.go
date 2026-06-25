@@ -98,7 +98,7 @@ func (a *App) CmdIn(args []string) error {
 	if err := a.Store.UpsertDay(day); err != nil {
 		return err
 	}
-	a.printf("Clocked in %s at %s\n", date.Format("Mon 2006-01-02"), start.Format("15:04"))
+	a.printf("%s clocked in %s at %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"), a.styler().Bold(start.Format("15:04")))
 	return nil
 }
 
@@ -154,11 +154,11 @@ func (a *App) CmdOut(args []string) error {
 	}
 
 	worked := calc.WorkedMinutes(*day.Start, end, day.EffectiveLunch())
-	a.printf("Clocked out %s at %s — worked %s (%s)\n",
-		date.Format("Mon 2006-01-02"), end.Format("15:04"),
-		calc.FormatHM(worked), calc.FormatDecimalHours(worked))
+	a.printf("%s clocked out %s at %s — worked %s %s\n",
+		a.styler().Green("✓"), date.Format("Mon 2006-01-02"), a.styler().Bold(end.Format("15:04")),
+		a.styler().Bold(calc.FormatHM(worked)), a.styler().Dim("("+calc.FormatDecimalHours(worked)+")"))
 	if worked > domain.LongDayMinutes {
-		a.errorf("warning: that is a very long day (%s)\n", calc.FormatHM(worked))
+		a.errorf("%s that is a very long day (%s)\n", a.styler().Yellow("warning:"), calc.FormatHM(worked))
 	}
 	return nil
 }
@@ -240,13 +240,13 @@ func (a *App) CmdSet(args []string) error {
 		return err
 	}
 
-	a.printf("Set %s\n", date.Format("Mon 2006-01-02"))
-	a.printf("  before: %s\n", describeDay(before))
-	a.printf("  after:  %s\n", describeDay(newDay))
+	a.printf("%s set %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"))
+	a.printf("  %s %s\n", a.styler().Dim("before:"), describeDay(before))
+	a.printf("  %s %s\n", a.styler().Dim("after: "), describeDay(newDay))
 
 	worked := calc.WorkedMinutes(start, end, newDay.EffectiveLunch())
 	if worked > domain.LongDayMinutes {
-		a.errorf("warning: that is a very long day (%s)\n", calc.FormatHM(worked))
+		a.errorf("%s that is a very long day (%s)\n", a.styler().Yellow("warning:"), calc.FormatHM(worked))
 	}
 	return nil
 }
@@ -281,7 +281,7 @@ func (a *App) CmdOff(args []string) error {
 		if _, err := a.Store.DeleteDay(date); err != nil {
 			return err
 		}
-		a.printf("Cleared OFF on %s\n", date.Format("Mon 2006-01-02"))
+		a.printf("%s cleared OFF on %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"))
 		return nil
 	}
 
@@ -298,7 +298,7 @@ func (a *App) CmdOff(args []string) error {
 	if err := a.Store.UpsertDay(off); err != nil {
 		return err
 	}
-	a.printf("Marked %s OFF\n", date.Format("Mon 2006-01-02"))
+	a.printf("%s marked %s %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"), a.styler().Yellow("OFF"))
 	return nil
 }
 
@@ -325,7 +325,7 @@ func (a *App) CmdClear(args []string) error {
 		a.printf("Nothing to clear for %s\n", date.Format("Mon 2006-01-02"))
 		return nil
 	}
-	a.printf("Cleared %s\n", date.Format("Mon 2006-01-02"))
+	a.printf("%s cleared %s\n", a.styler().Green("✓"), date.Format("Mon 2006-01-02"))
 	return nil
 }
 

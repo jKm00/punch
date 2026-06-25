@@ -16,6 +16,20 @@ work, and exits.
 - A weekly summary shows totals and a suggested logging range for the official
   app.
 
+## Output & colors
+
+On an interactive terminal, `wh` renders bordered boxes and uses color (green
+for positive balances, red for negative, yellow for OFF/warnings). Output
+automatically falls back to plain, uncolored text when:
+
+- stdout is piped or redirected (e.g. `wh week last > week.txt`),
+- the `NO_COLOR` environment variable is set, or
+- you pass `--no-color` (works in any position, with any command).
+
+This keeps copied/redirected output clean while giving a richer view
+interactively. No extra dependencies are used — the entire UI is built on the
+Go standard library.
+
 ## Installation
 
 ### Prerequisites

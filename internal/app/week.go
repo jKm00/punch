@@ -9,6 +9,7 @@ import (
 	"wh/internal/domain"
 	"wh/internal/isoweek"
 	"wh/internal/store"
+	"wh/internal/ui"
 )
 
 // resolveWeek parses the `[N|last]` positional and `--year` flag against the
@@ -129,10 +130,7 @@ func (a *App) CmdWeek(args []string) error {
 }
 
 func (a *App) printWeek(wd *weekData) error {
-	a.printf("Week %d (%s – %s)\n",
-		wd.week,
-		wd.monday.Format("Mon 2006-01-02"),
-		wd.sunday.Format("Mon 2006-01-02"))
+	s := a.styler()
 
 	// Index days by date for the Mon..Sun walk.
 	byDate := map[string]*store.Day{}
@@ -140,54 +138,75 @@ func (a *App) printWeek(wd *weekData) error {
 		byDate[d.Date.Format(store.DateLayout)] = d
 	}
 
-	a.printf("%-4s %-10s %-13s %-9s %-9s %s\n", "", "Date", "Start–End", "Worked", "Expected", "Balance")
+	// Column widths (visible). Day, Date, Start–End, Worked, Expected, Balance.
+	const (
+		wDay  = 3
+		wDate = 10
+		wSE   = 13
+		wWrk  = 8
+		wExp  = 8
+		wBal  = 9
+	)
+
+	row := func(c1, c2, c3, c4, c5, c6 string) string {
+		return ui.PadRight(c1, wDay) + "  " +
+			ui.PadRight(c2, wDate) + "  " +
+			ui.PadRight(c3, wSE) + "  " +
+			ui.PadRight(c4, wWrk) + "  " +
+			ui.PadRight(c5, wExp) + "  " +
+			ui.PadRight(c6, wBal)
+	}
+
+	var lines []string
+	lines = append(lines, s.Bold(row("", "Date", "Start–End", "Worked", "Expected", "Balance")))
+
 	for i := 0; i < 7; i++ {
 		day := wd.monday.AddDate(0, 0, i)
 		key := day.Format(store.DateLayout)
 		rec := byDate[key]
 		wd3 := day.Format("Mon")
 		dateStr := day.Format("2006-01-02")
+		dash := s.Dim("—")
 
-		if rec == nil {
-			a.printf("%-4s %-10s %-13s %-9s %-9s %s\n", wd3, dateStr, "—", "—", "—", "—")
-			continue
-		}
-		if rec.IsOff {
-			a.printf("%-4s %-10s %-13s %-9s %-9s %s\n", wd3, dateStr, "OFF", "—", "0m", "—")
-			continue
-		}
-		if rec.Start != nil && rec.End == nil {
-			a.printf("%-4s %-10s %-13s %-9s %-9s %s\n", wd3, dateStr,
-				rec.Start.Format("15:04")+"–open", "open",
-				calc.FormatHM(rec.ExpectedMinutes), "—")
-			continue
-		}
-		if rec.Start != nil && rec.End != nil {
+		switch {
+		case rec == nil:
+			lines = append(lines, s.Dim(row(wd3, dateStr, "—", "—", "—", "—")))
+		case rec.IsOff:
+			lines = append(lines, row(wd3, dateStr, s.Yellow("OFF"), dash, s.Dim("0m"), dash))
+		case rec.Start != nil && rec.End == nil:
+			lines = append(lines, row(wd3, dateStr,
+				rec.Start.Format("15:04")+s.Dim("–open"), s.Cyan("open"),
+				calc.FormatHM(rec.ExpectedMinutes), dash))
+		case rec.Start != nil && rec.End != nil:
 			worked := calc.WorkedMinutes(*rec.Start, *rec.End, rec.EffectiveLunch())
 			bal := worked - rec.ExpectedMinutes
-			a.printf("%-4s %-10s %-13s %-9s %-9s %s\n", wd3, dateStr,
+			lines = append(lines, row(wd3, dateStr,
 				rec.Start.Format("15:04")+"–"+rec.End.Format("15:04"),
 				calc.FormatHM(worked),
 				calc.FormatHM(rec.ExpectedMinutes),
-				calc.FormatHM(bal))
-			continue
+				s.Balance(bal, calc.FormatHM(bal))))
+		default:
+			lines = append(lines, row(wd3, dateStr, dash, dash,
+				calc.FormatHM(rec.ExpectedMinutes), dash))
 		}
-		// start nil but record exists (e.g. expected only)
-		a.printf("%-4s %-10s %-13s %-9s %-9s %s\n", wd3, dateStr, "—", "—",
-			calc.FormatHM(rec.ExpectedMinutes), "—")
 	}
 
+	// Totals block, separated by a rule.
 	balance := wd.totalWorked - wd.totalExpected
-	a.printf("\n")
-	a.printf("Worked:   %s (%s)\n", calc.FormatHM(wd.totalWorked), calc.FormatDecimalHours(wd.totalWorked))
-	a.printf("Expected: %s (%s)\n", calc.FormatHM(wd.totalExpected), calc.FormatDecimalHours(wd.totalExpected))
-	a.printf("Balance:  %s (%s)\n", calc.FormatHM(balance), calc.FormatDecimalHours(balance))
+	tableWidth := ui.VisibleWidth(row("", "", "", "", "", ""))
+	lines = append(lines, s.Rule(tableWidth))
+	lines = append(lines,
+		s.Bold("Worked  ")+ui.PadRight(calc.FormatHM(wd.totalWorked), 9)+s.Dim("("+calc.FormatDecimalHours(wd.totalWorked)+")"))
+	lines = append(lines,
+		s.Bold("Expected")+" "+ui.PadRight(calc.FormatHM(wd.totalExpected), 9)+s.Dim("("+calc.FormatDecimalHours(wd.totalExpected)+")"))
+	lines = append(lines,
+		s.Bold("Balance ")+" "+ui.PadRight(s.Balance(balance, calc.FormatHM(balance)), 9)+s.Dim("("+calc.FormatDecimalHours(balance)+")"))
 
 	if balance > 0 {
 		sh, sm, eh, em := calc.LoggingEnd(wd.lastWorkedSeason, balance)
-		a.printf("Log:      %s–%s  (extra %s, %s season)\n",
-			calc.FormatClock(sh, sm), calc.FormatClock(eh, em),
-			calc.FormatHM(balance), wd.lastWorkedSeason)
+		lines = append(lines, s.Green(fmt.Sprintf("Log     %s–%s",
+			calc.FormatClock(sh, sm), calc.FormatClock(eh, em)))+
+			s.Dim(fmt.Sprintf("  (extra %s, %s season)", calc.FormatHM(balance), wd.lastWorkedSeason)))
 	}
 
 	loggedAt, err := a.Store.WeekLoggedAt(isoweek.Key(wd.year, wd.week))
@@ -195,10 +214,16 @@ func (a *App) printWeek(wd *weekData) error {
 		return err
 	}
 	if loggedAt != nil {
-		a.printf("Status:   logged at %s\n", loggedAt.Format("2006-01-02 15:04"))
+		lines = append(lines, s.Green("✓ logged")+s.Dim(" at "+loggedAt.Format("2006-01-02 15:04")))
 	} else {
-		a.printf("Status:   not logged\n")
+		lines = append(lines, s.Yellow("• not logged"))
 	}
+
+	title := fmt.Sprintf("Week %d  %s – %s",
+		wd.week,
+		wd.monday.Format("Mon 2006-01-02"),
+		wd.sunday.Format("Mon 2006-01-02"))
+	a.printf("%s", s.Box(title, lines))
 	return nil
 }
 
@@ -258,17 +283,28 @@ func (a *App) CmdUnlogged(args []string) error {
 	}
 
 	if len(pendings) == 0 {
-		a.printf("No unlogged past weeks. 🎉\n")
+		a.printf("%s\n", a.styler().Green("No unlogged past weeks."))
 		return nil
 	}
 
-	a.printf("%-9s %-27s %s\n", "Week", "Range", "Pending extra")
-	for _, p := range pendings {
-		a.printf("%-9s %-27s %s\n",
-			isoweek.Key(p.year, p.week),
-			fmt.Sprintf("%s – %s", p.monday.Format("2006-01-02"), p.sunday.Format("2006-01-02")),
-			calc.FormatHM(p.extra))
+	s := a.styler()
+	const (
+		wWeek  = 9
+		wRange = 25
+	)
+	rowU := func(c1, c2, c3 string) string {
+		return ui.PadRight(c1, wWeek) + "  " + ui.PadRight(c2, wRange) + "  " + c3
 	}
+	var lines []string
+	lines = append(lines, s.Bold(rowU("Week", "Range", "Pending extra")))
+	for _, p := range pendings {
+		rng := fmt.Sprintf("%s – %s", p.monday.Format("2006-01-02"), p.sunday.Format("2006-01-02"))
+		lines = append(lines, rowU(
+			s.Yellow(isoweek.Key(p.year, p.week)),
+			rng,
+			s.Balance(p.extra, calc.FormatHM(p.extra))))
+	}
+	a.printf("%s", s.Box("Unlogged weeks", lines))
 	return nil
 }
 
@@ -296,17 +332,17 @@ func (a *App) CmdLog(args []string) error {
 
 	curYear, curWeek := isoweek.Of(a.now())
 	if year == curYear && week == curWeek {
-		a.errorf("warning: marking the current (in-progress) week as logged\n")
+		a.errorf("%s marking the current (in-progress) week as logged\n", a.styler().Yellow("warning:"))
 	}
 	if wd.totalWorked == 0 {
-		a.errorf("warning: week %s has no worked time\n", isoweek.Key(year, week))
+		a.errorf("%s week %s has no worked time\n", a.styler().Yellow("warning:"), isoweek.Key(year, week))
 	}
 
 	at := a.now()
 	if err := a.Store.SetWeekLogged(isoweek.Key(year, week), at); err != nil {
 		return err
 	}
-	a.printf("Marked %s logged at %s\n", isoweek.Key(year, week), at.Format("2006-01-02 15:04"))
+	a.printf("%s %s logged at %s\n", a.styler().Green("✓"), isoweek.Key(year, week), at.Format("2006-01-02 15:04"))
 	return nil
 }
 
@@ -322,7 +358,7 @@ func (a *App) CmdSeason(args []string) error {
 		if err != nil {
 			return err
 		}
-		a.printf("%s\n", s)
+		a.printf("%s\n", a.styler().Bold(string(s)))
 		return nil
 	}
 	arg := fs.Arg(0)
@@ -331,9 +367,11 @@ func (a *App) CmdSeason(args []string) error {
 		if err := a.Store.SetSeason(domain.Season(arg)); err != nil {
 			return err
 		}
-		a.printf("Season set to %s (expected %s/day, logging starts %s)\n",
-			arg, calc.FormatHM(domain.ExpectedMinutesFor(domain.Season(arg))),
-			logStartClock(domain.Season(arg)))
+		a.printf("%s season set to %s %s\n",
+			a.styler().Green("✓"), a.styler().Bold(arg),
+			a.styler().Dim(fmt.Sprintf("(expected %s/day, logging starts %s)",
+				calc.FormatHM(domain.ExpectedMinutesFor(domain.Season(arg))),
+				logStartClock(domain.Season(arg)))))
 		return nil
 	default:
 		return fmt.Errorf("invalid season %q: use `summer` or `winter`", arg)
@@ -362,33 +400,32 @@ func (a *App) CmdStatus(args []string) error {
 	if err != nil {
 		return err
 	}
-	a.printf("Today:  %s (season: %s)\n", today.Format("Mon 2006-01-02"), season)
 
-	if day == nil {
-		a.printf("Status: not clocked in\n")
-		return nil
-	}
-	if day.IsOff {
-		a.printf("Status: OFF\n")
-		return nil
-	}
-	if day.Start != nil && day.End == nil {
+	s := a.styler()
+	var lines []string
+	lines = append(lines, s.Dim("Date   ")+today.Format("Mon 2006-01-02")+s.Dim("  season ")+string(season))
+
+	switch {
+	case day == nil:
+		lines = append(lines, s.Dim("Status ")+s.Yellow("not clocked in"))
+	case day.IsOff:
+		lines = append(lines, s.Dim("Status ")+s.Yellow("OFF"))
+	case day.Start != nil && day.End == nil:
 		elapsed := int(now.Sub(*day.Start).Minutes())
 		netSoFar := elapsed - day.EffectiveLunch()
 		if netSoFar < 0 {
 			netSoFar = 0
 		}
-		a.printf("Status: clocked IN since %s — elapsed %s, net of lunch %s\n",
-			day.Start.Format("15:04"), calc.FormatHM(elapsed), calc.FormatHM(netSoFar))
-		return nil
-	}
-	if day.Start != nil && day.End != nil {
+		lines = append(lines, s.Dim("Status ")+s.Cyan("clocked IN")+s.Dim(" since ")+day.Start.Format("15:04"))
+		lines = append(lines, s.Dim("Elapsed ")+calc.FormatHM(elapsed)+s.Dim("   net of lunch ")+calc.FormatHM(netSoFar))
+	case day.Start != nil && day.End != nil:
 		worked := calc.WorkedMinutes(*day.Start, *day.End, day.EffectiveLunch())
-		a.printf("Status: clocked OUT — %s–%s, worked %s (%s)\n",
-			day.Start.Format("15:04"), day.End.Format("15:04"),
-			calc.FormatHM(worked), calc.FormatDecimalHours(worked))
-		return nil
+		lines = append(lines, s.Dim("Status ")+s.Green("clocked OUT")+s.Dim(" ")+day.Start.Format("15:04")+"–"+day.End.Format("15:04"))
+		lines = append(lines, s.Dim("Worked ")+calc.FormatHM(worked)+s.Dim(" ("+calc.FormatDecimalHours(worked)+")"))
+	default:
+		lines = append(lines, s.Dim("Status ")+s.Yellow("not clocked in"))
 	}
-	a.printf("Status: not clocked in\n")
+
+	a.printf("%s", s.Box("Status", lines))
 	return nil
 }

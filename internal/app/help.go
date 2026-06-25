@@ -3,7 +3,7 @@ package app
 const usageText = `wh — workhour tracker
 
 USAGE
-  wh <command> [args]
+  wh <command> [args] [--no-color]
 
 COMMANDS
   in    [DATE] [--at HH:MM] [--force]   Clock in. Bare now-case records (now - 5min).
@@ -29,6 +29,10 @@ RULES & CONSTANTS
   Logging range starts: winter 16:00, summer 15:30.
   Clock adjustment ±5min on bare in/out. --at and explicit times are literal.
   No overnight shifts. Future times require --force.
+
+OUTPUT
+  Color and boxes are shown only on an interactive terminal. Output is plain
+  text when piped/redirected, when NO_COLOR is set, or with --no-color.
 `
 
 // Usage returns the help text.
