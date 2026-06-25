@@ -21,10 +21,10 @@ var errSetupAborted = errors.New("setup aborted")
 
 // CmdSetup runs the configuration wizard explicitly (`punch setup`). With
 // --curr it instead prints the currently-effective configuration and exits
-// without prompting or writing anything. Defaults for each prompt are the
-// currently-effective values: the stored value if present, else the domain
-// constant — exactly what LoadConfig already resolved into a.Config. The current
-// season is read separately.
+// without prompting or writing anything. The wizard always offers the hardcoded
+// recommended defaults (domain.DefaultConfig / domain.DefaultSeason) for each
+// prompt, regardless of any custom values currently stored. The current season
+// is read separately only for the --curr listing.
 func (a *App) CmdSetup(args []string) error {
 	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -33,17 +33,16 @@ func (a *App) CmdSetup(args []string) error {
 		return err
 	}
 
-	season, err := a.Store.Season()
-	if err != nil {
-		return err
-	}
-
 	if *curr {
+		season, err := a.Store.Season()
+		if err != nil {
+			return err
+		}
 		a.printConfig(a.Config, season)
 		return nil
 	}
 
-	cfg, season, err := a.runWizard(a.Config, season)
+	cfg, season, err := a.runWizard(domain.DefaultConfig(), domain.DefaultSeason)
 	if err != nil {
 		return err
 	}

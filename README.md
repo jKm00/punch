@@ -118,10 +118,11 @@ The wizard configures:
 - **Default lunch break** (default `30m`, deducted on every clocked day)
 - **Current season** (`summer` or `winter`)
 
-For every prompt the current value is shown in brackets — press **Enter** to
-keep it. Values are stored in the same SQLite database as your hours, so they
-persist across runs. On a re-run the bracketed defaults reflect your stored
-values, so you only change what you want.
+For every prompt the **recommended default** is shown in brackets — press
+**Enter** to accept it. Values are stored in the same SQLite database as your
+hours, so they persist across runs. The wizard always offers the built-in
+recommended defaults (not your stored values), so re-running it and accepting
+every prompt resets your configuration back to the recommendations.
 
 Notes:
 
@@ -315,11 +316,13 @@ punch setup --curr             # print the current configuration (no prompts)
 ```
 
 Walks through the configurable values (expected hours per season, logging start
-times, default lunch, and the current season), showing the current value as the
-`[default]` for each prompt — press Enter to keep it. The wizard also runs
-automatically the first time you use `punch` on an interactive terminal. Use
-`--curr` to print the currently-effective configuration without prompting or
-changing anything. See [Configuration](#configuration) for details.
+times, default lunch, and the current season), showing the **recommended
+default** as the `[default]` for each prompt — press Enter to accept it. The
+wizard always offers the built-in recommended defaults, even if you have custom
+values stored, so re-running it lets you reset toward the recommendations. The
+wizard also runs automatically the first time you use `punch` on an interactive
+terminal. Use `--curr` to print the currently-effective configuration without
+prompting or changing anything. See [Configuration](#configuration) for details.
 
 ### `punch status` — current state
 

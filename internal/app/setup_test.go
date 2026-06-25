@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"punch/internal/calc"
 	"punch/internal/domain"
 	"punch/internal/store"
 )
@@ -200,10 +201,11 @@ func TestSetupEOFAborts(t *testing.T) {
 	}
 }
 
-// TestSetupRerunShowsStoredDefaults pre-seeds config, then re-runs the wizard
-// with all-empty input and asserts the shown defaults reflect the stored values
-// and that accepting defaults keeps them.
-func TestSetupRerunShowsStoredDefaults(t *testing.T) {
+// TestSetupRerunUsesHardcodedDefaults pre-seeds custom config, then re-runs the
+// wizard with all-empty input and asserts the shown defaults are the hardcoded
+// recommended values (NOT the stored custom values), and that accepting them
+// overwrites the stored config with the hardcoded defaults.
+func TestSetupRerunUsesHardcodedDefaults(t *testing.T) {
 	st := newSetupStore(t)
 
 	seed := domain.Config{
@@ -217,24 +219,47 @@ func TestSetupRerunShowsStoredDefaults(t *testing.T) {
 		t.Fatalf("SaveConfig: %v", err)
 	}
 
-	// Re-run with all-empty answers; defaults must reflect the stored values.
+	// Re-run with all-empty answers; defaults must be the hardcoded recommended
+	// values, regardless of the stored custom config.
 	a, out, _ := setupApp(t, st, "\n\n\n\n\n\n")
 	if err := a.CmdSetup(nil); err != nil {
 		t.Fatalf("CmdSetup re-run: %v", err)
 	}
+	def := domain.DefaultConfig()
+	wantPrompts := []string{
+		"[" + calc.FormatHM(def.WinterExpectedMinutes) + "]",
+		"[" + calc.FormatHM(def.SummerExpectedMinutes) + "]",
+		"[" + calc.FormatClock(def.WinterLoggingStart.Hour, def.WinterLoggingStart.Minute) + "]",
+		"[" + calc.FormatClock(def.SummerLoggingStart.Hour, def.SummerLoggingStart.Minute) + "]",
+		"[" + calc.FormatHM(def.DefaultLunchMinutes) + "]",
+		"[" + string(domain.DefaultSeason) + "]",
+	}
 	prompts := out.String()
-	for _, want := range []string{"[8h]", "[6h30m]", "[17:15]", "[14:45]", "[1h]", "[summer]"} {
+	for _, want := range wantPrompts {
 		if !strings.Contains(prompts, want) {
-			t.Errorf("re-run prompts missing default %q\nprompts:\n%s", want, prompts)
+			t.Errorf("re-run prompts missing hardcoded default %q\nprompts:\n%s", want, prompts)
 		}
 	}
-	// Accepting defaults must keep the stored values.
+	// The custom stored values must NOT appear as defaults.
+	for _, notWant := range []string{"[8h]", "[6h30m]", "[17:15]", "[14:45]", "[1h]"} {
+		if strings.Contains(prompts, notWant) {
+			t.Errorf("re-run prompts should not show stored value %q\nprompts:\n%s", notWant, prompts)
+		}
+	}
+	// Accepting the hardcoded defaults must overwrite the stored config.
 	cfg, err := st.LoadConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg != seed {
-		t.Errorf("config after re-run = %+v, want unchanged seed %+v", cfg, seed)
+	if cfg != def {
+		t.Errorf("config after re-run = %+v, want hardcoded defaults %+v", cfg, def)
+	}
+	season, err := st.Season()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if season != domain.DefaultSeason {
+		t.Errorf("season after re-run = %q, want hardcoded default %q", season, domain.DefaultSeason)
 	}
 }
 
