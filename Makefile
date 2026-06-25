@@ -3,6 +3,12 @@
 BINARY := punch
 INSTALL_DIR := $(HOME)/.local/bin
 
+# Version stamped into the binary via -ldflags. Local `build`/`install` leave it
+# as "dev" (so they are never nagged to upgrade and cannot self-replace); only
+# release builds pass an explicit VERSION (see `release-build` and CI).
+VERSION ?= dev
+LDFLAGS := -s -w -X main.version=$(VERSION)
+
 # --- Dev environment ---------------------------------------------------------
 # Dev commands load variables from a local, gitignored .env file (if present),
 # then run the tool from source with `go run`. The .env is ONLY sourced by these
@@ -23,15 +29,22 @@ endif
 # PUNCH_DB precedence for dev targets: .env value (if any) wins, else DEV_DB.
 PUNCH_DB ?= $(DEV_DB)
 
-.PHONY: build install uninstall test vet tidy clean dev dev-build dev-db-path dev-reset env
+.PHONY: build install uninstall release-build test vet tidy clean dev dev-build dev-db-path dev-reset env
 
 # --- Production --------------------------------------------------------------
 
 build:
-	go build -o ./$(BINARY) ./cmd/punch
+	go build -ldflags "$(LDFLAGS)" -o ./$(BINARY) ./cmd/punch
 
 install:
-	go build -o $(INSTALL_DIR)/$(BINARY) ./cmd/punch
+	go build -ldflags "$(LDFLAGS)" -o $(INSTALL_DIR)/$(BINARY) ./cmd/punch
+
+# release-build cross-compiles a stamped binary for GOOS/GOARCH into OUT.
+# Used by CI; requires VERSION, GOOS, GOARCH, OUT to be set.
+#   make release-build VERSION=v1.0.0 GOOS=linux GOARCH=amd64 OUT=dist/punch
+release-build:
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
+		go build -trimpath -ldflags "$(LDFLAGS)" -o $(OUT) ./cmd/punch
 
 # Remove the installed binary. Your data (~/.local/share/punch/punch.db) is kept.
 uninstall:

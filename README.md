@@ -6,12 +6,53 @@ the company's official app.
 
 ## Installation
 
-Requires **Go 1.25+** and `~/.local/bin` on your `$PATH`.
+### Download a release (recommended)
+
+Grab the binary for your platform from the
+[latest release](https://dnb.ghe.com/Joakim-Edvardsen/punch/releases/latest),
+then put it on your `$PATH`:
 
 ```sh
-make install      # builds and installs to ~/.local/bin/punch
-punch help           # verify
+# pick the asset for your OS/arch, e.g. darwin_arm64 / darwin_amd64 / linux_amd64 / linux_arm64
+tar -xzf punch_<version>_darwin_arm64.tar.gz
+install -m 0755 punch ~/.local/bin/punch
+punch version          # verify
 ```
+
+Make sure `~/.local/bin` is on your `$PATH`.
+
+### Build from source
+
+Requires **Go 1.25+**:
+
+```sh
+make install           # builds and installs to ~/.local/bin/punch
+punch help
+```
+
+## Upgrading
+
+`punch` checks for new releases once a day (in the background) and prints a
+notice when one is available:
+
+```
+A new version of punch is available (v1.0.0 → v1.1.0). Run `punch upgrade` to update.
+```
+
+To update in place:
+
+```sh
+punch upgrade          # downloads the latest release, verifies it, replaces the binary
+```
+
+Notes:
+
+- The update check and `upgrade` talk to GitHub Enterprise. If the repo
+  requires authentication, set a token via `GH_ENTERPRISE_TOKEN` (or
+  `GITHUB_TOKEN` / `PUNCH_GITHUB_TOKEN`).
+- Disable the background check with `PUNCH_NO_UPDATE_CHECK=1`.
+- Builds installed from source report version `dev` and are never auto-nagged
+  or self-replaced — use `make install` to update them.
 
 ## Uninstall
 
@@ -40,6 +81,21 @@ make dev ARGS='set 15.02 --start 08:00 --end 16:00'
 make dev-reset    # delete the dev database
 make test         # run tests
 ```
+
+### Releasing
+
+Releases are cut by pushing a semver tag. A GitHub Actions workflow
+(`.github/workflows/release.yml`) builds binaries for macOS and Linux
+(`amd64`/`arm64`), packages each as `punch_<version>_<os>_<arch>.tar.gz`,
+generates a `SHA256SUMS` file, and attaches them all to a GitHub Release. The
+version is stamped into the binary via `-ldflags -X main.version`.
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Users then get the upgrade notice and can run `punch upgrade`.
 
 ## Rules & constants
 
@@ -94,6 +150,8 @@ punch log   [N|last] [--year YYYY]           Mark a week logged.
 punch season [summer|winter]                 Print or set the season.
 punch status                                 Show clock-in state and time so far today.
 punch analytics [YEAR]                       Yearly dashboard (default: current year).
+punch version                                Print the installed version.
+punch upgrade                                Download and install the latest version.
 punch help                                   Usage.
 ```
 
@@ -230,3 +288,12 @@ average arrival/departure), extremes (longest/shortest day, earliest start,
 latest finish — each with the date), week coverage (active/logged/unlogged),
 and worked-hours bar charts by weekday and by month. Prints a short notice if
 the year has no data.
+
+### `punch version` / `punch upgrade`
+
+```sh
+punch version              # print the installed version
+punch upgrade              # update to the latest release
+```
+
+See [Upgrading](#upgrading) for details on the update check and tokens.

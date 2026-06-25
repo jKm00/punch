@@ -1,6 +1,10 @@
 # Built binary
 /punch
 
+# Release build output
+/dist/
+/release/
+
 # Local databases (incl. dev.db)
 *.db
 *.db-wal

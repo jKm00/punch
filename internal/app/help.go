@@ -18,6 +18,8 @@ COMMANDS
   season [summer|winter]                Print or set the season.
   status                                Show clock-in state and time so far today.
   analytics [YEAR]                      Yearly dashboard (default: current year).
+  version                               Print the installed version.
+  upgrade                               Download and install the latest version.
   help                                  This help.
 
 DATE FORMATS (day-first European)
