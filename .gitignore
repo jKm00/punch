@@ -1,0 +1,11 @@
+# Built binary
+/wh
+
+# Local databases
+*.db
+*.db-wal
+*.db-shm
+
+# OS / editor cruft
+.DS_Store
+*.swp
