@@ -54,8 +54,12 @@ Notes:
 
 ## Uninstall
 
+Remove the binary:
+
 ```sh
-make uninstall    # removes ~/.local/bin/punch (keeps your data)
+rm -f ~/.local/bin/punch     # if you installed via the script or from source
+# or, from a cloned repo:
+make uninstall
 ```
 
 Your logged hours stay at `~/.local/share/punch/punch.db`. To remove them too:
@@ -295,4 +299,4 @@ punch version              # print the installed version
 punch upgrade              # update to the latest release
 ```
 
-See [Upgrading](#upgrading) for details on the update check and tokens.
+See [Upgrading](#upgrading) for details on the update check.
