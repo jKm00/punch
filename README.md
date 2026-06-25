@@ -1,144 +1,46 @@
 # wh — workhour tracker
 
-`wh` is a small personal command-line tool for tracking work hours. Run a
-command when you arrive, a command when you leave, then view a weekly summary so
-you can log overtime in the company's official app.
-
-It is **not** a daemon: each invocation opens a local SQLite database, does its
-work, and exits.
-
-## How it works
-
-- One record per day (start, end, lunch, expected hours, or "off").
-- Worked time for a day = `(end − start) − lunch`, never negative.
-- Expected hours are **snapshotted per day** from the current season when the
-  day is first created, so changing season later does not rewrite history.
-- A weekly summary shows totals and a suggested logging range for the official
-  app.
-
-## Output & colors
-
-On an interactive terminal, `wh` renders bordered boxes and uses color (green
-for positive balances, red for negative, yellow for OFF/warnings). Output
-automatically falls back to plain, uncolored text when:
-
-- stdout is piped or redirected (e.g. `wh week last > week.txt`),
-- the `NO_COLOR` environment variable is set, or
-- you pass `--no-color` (works in any position, with any command).
-
-This keeps copied/redirected output clean while giving a richer view
-interactively. No extra dependencies are used — the entire UI is built on the
-Go standard library.
+`wh` is a command-line tool for fast work-hour logging: run a command when you
+arrive, another when you leave, then check a weekly summary to log overtime in
+the company's official app.
 
 ## Installation
 
-### Prerequisites
-
-- **Go 1.25** or newer.
-- `~/.local/bin` on your `$PATH` (it already is, for this user).
-
-### Build & install
+Requires **Go 1.25+** and `~/.local/bin` on your `$PATH`.
 
 ```sh
 make install      # builds and installs to ~/.local/bin/wh
+wh help           # verify
 ```
-
-Other targets:
-
-```sh
-make build        # build ./wh in the repo
-make test         # run the unit tests
-make vet          # go vet ./...
-make tidy         # go mod tidy
-```
-
-Verify it works:
-
-```sh
-wh help
-```
-
-The only non-standard-library dependency is the pure-Go SQLite driver
-`modernc.org/sqlite` (no CGo, no system SQLite required).
-
-## Database location
-
-The database is stored at:
-
-1. `$WH_DB` if set (highest precedence), else
-2. `$XDG_DATA_HOME/wh/wh.db` if `$XDG_DATA_HOME` is set, else
-3. `~/.local/share/wh/wh.db`.
-
-The directory is created automatically. The schema is created on first run
-(`PRAGMA journal_mode=WAL`, `PRAGMA foreign_keys=ON`). There is no migration
-framework.
 
 ## Development
 
-When working on the tool, run it from source against a **separate dev
-database** so you never touch your real data at `~/.local/share/wh/wh.db`.
+Copy the env template, then run from source via `make dev`. `.env` sets
+`WH_DB=./dev.db` so dev runs use a separate, gitignored database.
 
-### One-time setup
-
-```bash
+```sh
 cp .env.example .env
-```
 
-`.env` is gitignored and sets `WH_DB=./dev.db` (a repo-local, gitignored
-database). It is loaded **only** by the `make dev*` targets — it is never read
-by the installed `wh` binary, so your production database is unaffected.
-
-> Avoid `export WH_DB=...` in your shell: that variable would leak into the
-> installed `wh` and make it use your dev database too. The `make dev` targets
-> scope `WH_DB` to the dev command only, avoiding this.
-
-### Dev commands
-
-Run any subcommand from source via `make dev ARGS="..."`:
-
-```bash
-make dev ARGS="help"
 make dev ARGS="in"
 make dev ARGS="week last"
 make dev ARGS='set 15.02 --start 08:00 --end 16:00'
-```
 
-Other dev targets:
-
-| Command            | What it does                                              |
-| ------------------ | --------------------------------------------------------- |
-| `make dev ARGS=…`  | Run `go run ./cmd/wh …` against the dev database.         |
-| `make env`         | Print the effective dev env (`ENV_FILE`, `WH_DB`).        |
-| `make dev-db-path` | Print the dev database path `make dev` will use.          |
-| `make dev-reset`   | Delete the dev database (and its `-wal`/`-shm` sidecars). |
-| `make build`       | Build a local `./wh` binary (gitignored).                 |
-| `make test`        | `go test ./...`                                            |
-| `make vet`         | `go vet ./...`                                             |
-| `make tidy`        | `go mod tidy`                                              |
-
-The source entry point lives at `./cmd/wh`, so a bare `go run .` will not work —
-use `make dev` (or `go run ./cmd/wh …`) instead.
-
-If you build a binary for repeated manual dev runs, point it at the dev DB
-explicitly so it doesn't use production:
-
-```bash
-make build
-WH_DB=./dev.db ./wh week
+make dev-reset    # delete the dev database
+make test         # run tests
 ```
 
 ## Rules & constants
 
 These are hardcoded:
 
-| Constant                    | Value                          |
-| --------------------------- | ------------------------------ |
-| Default lunch               | 30m (deducted every clocked day) |
-| Expected per day — winter   | 7h30m                          |
-| Expected per day — summer   | 7h                             |
-| Logging range start — winter | 16:00                         |
-| Logging range start — summer | 15:30                         |
-| Clock adjustment            | ±5 minutes                     |
+| Constant                     | Value                            |
+| ---------------------------- | -------------------------------- |
+| Default lunch                | 30m (deducted every clocked day) |
+| Expected per day — winter    | 7h30m                            |
+| Expected per day — summer    | 7h                               |
+| Logging range start — winter | 16:00                            |
+| Logging range start — summer | 15:30                            |
+| Clock adjustment             | ±5 minutes                       |
 
 - **Clock adjustment:** a bare `wh in` records `now − 5min`; a bare `wh out`
   records `now + 5min`. When you pass `--at HH:MM` (or any explicit
@@ -260,7 +162,6 @@ Status:   not logged
 ```
 
 The logging range uses the season of the most-recently-worked day in that week.
-Output is plain text with no ANSI color, so it is safe to pipe.
 
 ### `wh unlogged` — pending weeks
 
