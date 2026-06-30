@@ -61,12 +61,6 @@ func (a *App) loadWeek(year, week int) (*weekData, error) {
 	}
 	wd := &weekData{year: year, week: week, monday: monday, sunday: sunday, days: days}
 
-	season, err := a.Store.Season()
-	if err != nil {
-		return nil, err
-	}
-	wd.lastWorkedSeason = season // fallback
-
 	var lastWorked time.Time
 	for _, d := range days {
 		if d.IsOff {
@@ -81,29 +75,14 @@ func (a *App) loadWeek(year, week int) (*weekData, error) {
 			}
 		}
 	}
-	// Season of the most-recent-worked-day: we snapshot expected minutes, so
-	// infer season from the day's expected value when possible.
+	// Season of the most-recent-worked-day is derived from its date. When the
+	// week has no worked day, fall back to the season of the week's Monday.
 	if wd.hasLastWorkedDay {
-		for _, d := range days {
-			if d.Date.Equal(lastWorked) {
-				wd.lastWorkedSeason = a.seasonFromExpected(d.ExpectedMinutes, season)
-			}
-		}
+		wd.lastWorkedSeason = a.Config.SeasonFor(lastWorked)
+	} else {
+		wd.lastWorkedSeason = a.Config.SeasonFor(monday)
 	}
 	return wd, nil
-}
-
-// seasonFromExpected infers the season from a snapshotted expected-minutes
-// value, falling back to the current season for non-standard values.
-func (a *App) seasonFromExpected(expected int, fallback domain.Season) domain.Season {
-	switch expected {
-	case a.Config.SummerExpectedMinutes:
-		return domain.Summer
-	case a.Config.WinterExpectedMinutes:
-		return domain.Winter
-	default:
-		return fallback
-	}
 }
 
 // CmdWeek handles `punch week [N|last] [--year YYYY]`.
@@ -366,43 +345,6 @@ func (a *App) CmdLog(args []string) error {
 	return nil
 }
 
-// CmdSeason handles `punch season [summer|winter]`.
-func (a *App) CmdSeason(args []string) error {
-	fs := flag.NewFlagSet("season", flag.ContinueOnError)
-	fs.SetOutput(a.Err)
-	if err := fs.Parse(reorderArgs(args)); err != nil {
-		return err
-	}
-	if fs.NArg() == 0 {
-		s, err := a.Store.Season()
-		if err != nil {
-			return err
-		}
-		a.printf("%s\n", a.styler().Bold(string(s)))
-		return nil
-	}
-	arg := fs.Arg(0)
-	switch domain.Season(arg) {
-	case domain.Summer, domain.Winter:
-		if err := a.Store.SetSeason(domain.Season(arg)); err != nil {
-			return err
-		}
-		a.printf("%s season set to %s %s\n",
-			a.styler().Green("✓"), a.styler().Bold(arg),
-			a.styler().Dim(fmt.Sprintf("(expected %s/day, typical end of day %s)",
-				calc.FormatHM(a.Config.ExpectedMinutesFor(domain.Season(arg))),
-				a.endOfDayClock(domain.Season(arg)))))
-		return nil
-	default:
-		return fmt.Errorf("invalid season %q: use `summer` or `winter`", arg)
-	}
-}
-
-func (a *App) endOfDayClock(s domain.Season) string {
-	h, m := a.Config.EndOfDayFor(s)
-	return calc.FormatClock(h, m)
-}
-
 // CmdStatus handles `punch status`.
 func (a *App) CmdStatus(args []string) error {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
@@ -416,14 +358,14 @@ func (a *App) CmdStatus(args []string) error {
 	if err != nil {
 		return err
 	}
-	season, err := a.Store.Season()
-	if err != nil {
-		return err
-	}
 
 	s := a.styler()
 	var lines []string
-	lines = append(lines, s.Dim("Date   ")+today.Format(displayDateWeekday)+s.Dim("  season ")+string(season))
+	dateLine := s.Dim("Date   ") + today.Format(displayDateWeekday)
+	if a.Config.SeasonsEnabled {
+		dateLine += s.Dim("  season ") + string(a.Config.SeasonFor(today))
+	}
+	lines = append(lines, dateLine)
 
 	switch {
 	case day == nil:

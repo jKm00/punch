@@ -1,6 +1,8 @@
 // Package domain holds the hardcoded constants and core value types for punch.
 package domain
 
+import "time"
+
 // Season represents the expected-hours regime in effect.
 type Season string
 
@@ -8,9 +10,6 @@ const (
 	Winter Season = "winter"
 	Summer Season = "summer"
 )
-
-// DefaultSeason is used when no season has been configured.
-const DefaultSeason = Winter
 
 // Hardcoded constants (all expressed in minutes unless noted). These serve as
 // the fallback defaults when the corresponding configuration value has not been
@@ -40,12 +39,33 @@ const (
 	SummerEndOfDayMinute = 30
 )
 
+// Default summer-period boundaries (inclusive), expressed as recurring
+// month/day pairs. These anchor the date-driven season derivation when seasons
+// are enabled. Defaults: 15.05 – 31.08.
+const (
+	SummerStartMonth = 5
+	SummerStartDay   = 15
+	SummerEndMonth   = 8
+	SummerEndDay     = 31
+)
+
 // TimeOfDay is a wall-clock hour:minute, used for the configurable typical
 // end-of-day times.
 type TimeOfDay struct {
 	Hour   int
 	Minute int
 }
+
+// MonthDay is a year-agnostic recurring calendar point (month + day). It is
+// used to express the start and end of the summer period without binding to a
+// specific year.
+type MonthDay struct {
+	Month int
+	Day   int
+}
+
+// ordinal collapses a MonthDay into a comparable month*100+day value.
+func (md MonthDay) ordinal() int { return md.Month*100 + md.Day }
 
 // Config holds the resolved configuration values for one CLI invocation. Each
 // field is loaded from persisted settings, falling back to the package
@@ -57,6 +77,15 @@ type Config struct {
 	WinterEndOfDay        TimeOfDay
 	SummerEndOfDay        TimeOfDay
 	DefaultLunchMinutes   int
+
+	// SeasonsEnabled controls whether separate summer/winter schedules apply.
+	// When false the winter slot is used year-round and SeasonFor always
+	// returns Winter.
+	SeasonsEnabled bool
+	// SummerStart and SummerEnd bound the summer period (inclusive) as
+	// recurring month/day pairs.
+	SummerStart MonthDay
+	SummerEnd   MonthDay
 }
 
 // DefaultConfig returns a Config populated entirely from the package constants.
@@ -68,6 +97,9 @@ func DefaultConfig() Config {
 		WinterEndOfDay:        TimeOfDay{Hour: WinterEndOfDayHour, Minute: WinterEndOfDayMinute},
 		SummerEndOfDay:        TimeOfDay{Hour: SummerEndOfDayHour, Minute: SummerEndOfDayMinute},
 		DefaultLunchMinutes:   DefaultLunchMinutes,
+		SeasonsEnabled:        true,
+		SummerStart:           MonthDay{Month: SummerStartMonth, Day: SummerStartDay},
+		SummerEnd:             MonthDay{Month: SummerEndMonth, Day: SummerEndDay},
 	}
 }
 
@@ -89,15 +121,26 @@ func (cfg Config) EndOfDayFor(s Season) (hour, minute int) {
 	return cfg.WinterEndOfDay.Hour, cfg.WinterEndOfDay.Minute
 }
 
-// Normalize coerces an arbitrary season string to a known Season, defaulting
-// to the configured default for unknown/empty values.
-func Normalize(s string) Season {
-	switch Season(s) {
-	case Summer:
-		return Summer
-	case Winter:
+// SeasonFor derives the season in effect on the given date. When seasons are
+// disabled the winter (year-round) slot is always returned. Otherwise the date
+// is compared against the configured summer period (inclusive boundaries),
+// handling intervals that wrap across the new year.
+func (cfg Config) SeasonFor(date time.Time) Season {
+	if !cfg.SeasonsEnabled {
 		return Winter
-	default:
-		return DefaultSeason
 	}
+	curOrd := int(date.Month())*100 + date.Day()
+	startOrd := cfg.SummerStart.ordinal()
+	endOrd := cfg.SummerEnd.ordinal()
+	if startOrd <= endOrd {
+		if startOrd <= curOrd && curOrd <= endOrd {
+			return Summer
+		}
+		return Winter
+	}
+	// Wrap-around interval (e.g. 01.11 – 28.02).
+	if curOrd >= startOrd || curOrd <= endOrd {
+		return Summer
+	}
+	return Winter
 }

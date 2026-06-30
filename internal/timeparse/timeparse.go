@@ -120,6 +120,62 @@ func CombineDateTime(date time.Time, hour, minute int) time.Time {
 	return time.Date(date.Year(), date.Month(), date.Day(), hour, minute, 0, 0, date.Location())
 }
 
+// daysInMonth returns the maximum day count for a month (1–12). February uses
+// 29 so that 29.02 is accepted for a year-agnostic recurring date.
+func daysInMonth(month int) int {
+	switch month {
+	case 1, 3, 5, 7, 8, 10, 12:
+		return 31
+	case 4, 6, 9, 11:
+		return 30
+	case 2:
+		return 29
+	default:
+		return 0
+	}
+}
+
+// ParseMonthDay parses a year-agnostic day-first month/day in the forms DD.MM
+// or DD-MM, returning the month and day. The month must be 1–12 and the day
+// must be valid for that month (February allows up to 29). Empty input is not
+// handled here; callers decide how to treat it (e.g. keep a default).
+func ParseMonthDay(s string) (month, day int, err error) {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return 0, 0, fmt.Errorf("empty month/day")
+	}
+
+	var sep string
+	switch {
+	case strings.Contains(trimmed, "."):
+		sep = "."
+	case strings.Contains(trimmed, "-"):
+		sep = "-"
+	default:
+		return 0, 0, fmt.Errorf("invalid month/day %q: expected DD.MM or DD-MM", s)
+	}
+
+	parts := strings.Split(trimmed, sep)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return 0, 0, fmt.Errorf("invalid month/day %q: expected DD%sMM", s, sep)
+	}
+	d, derr := strconv.Atoi(parts[0])
+	if derr != nil {
+		return 0, 0, fmt.Errorf("invalid month/day %q: bad day", s)
+	}
+	m, merr := strconv.Atoi(parts[1])
+	if merr != nil {
+		return 0, 0, fmt.Errorf("invalid month/day %q: bad month", s)
+	}
+	if m < 1 || m > 12 {
+		return 0, 0, fmt.Errorf("invalid month/day %q: month out of range", s)
+	}
+	if d < 1 || d > daysInMonth(m) {
+		return 0, 0, fmt.Errorf("invalid month/day %q: day out of range for month", s)
+	}
+	return m, d, nil
+}
+
 func dateOnly(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }

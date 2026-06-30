@@ -175,22 +175,22 @@ func TestOffMutualExclusion(t *testing.T) {
 	}
 }
 
-// TestSeasonSnapshotAtCreation verifies that a day created while season=winter
-// keeps expected=450 even after toggling the season to summer.
+// TestSeasonSnapshotAtCreation verifies that a day created on a winter date
+// snapshots the winter expected-minutes, and that the snapshot is not
+// retroactively recomputed — even when the day is re-read later (the stored
+// value, not a derived one, is what persists).
 func TestSeasonSnapshotAtCreation(t *testing.T) {
 	a, _, _ := newTestApp(t)
-	// Default season is winter; create a day via set.
-	if s, err := a.Store.Season(); err != nil || s != domain.Winter {
-		t.Fatalf("precondition: season = %v, %v; want winter", s, err)
+	// 15.01.2026 falls outside the default summer period (15.05–31.08), so the
+	// derived season is winter.
+	winterDate := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+	if s := a.Config.SeasonFor(winterDate); s != domain.Winter {
+		t.Fatalf("precondition: SeasonFor(15.01) = %v; want winter", s)
 	}
-	if err := a.CmdSet([]string{"24.06.2026", "--start", "08:00", "--end", "16:00"}); err != nil {
+	if err := a.CmdSet([]string{"15.01.2026", "--start", "08:00", "--end", "16:00"}); err != nil {
 		t.Fatalf("CmdSet: %v", err)
 	}
-	// Toggle to summer.
-	if err := a.Store.SetSeason(domain.Summer); err != nil {
-		t.Fatal(err)
-	}
-	day, err := a.Store.GetDay(a.dateOnly(fixedNow))
+	day, err := a.Store.GetDay(winterDate)
 	if err != nil {
 		t.Fatal(err)
 	}

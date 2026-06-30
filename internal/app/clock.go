@@ -75,15 +75,11 @@ func (a *App) CmdIn(args []string) error {
 	if err != nil {
 		return err
 	}
-	season, err := a.Store.Season()
-	if err != nil {
-		return err
-	}
 
 	if day == nil {
 		day = &store.Day{
 			Date:            date,
-			ExpectedMinutes: a.Config.ExpectedMinutesFor(season),
+			ExpectedMinutes: a.Config.ExpectedMinutesFor(a.Config.SeasonFor(date)),
 		}
 	}
 	if day.IsOff {
@@ -200,11 +196,6 @@ func (a *App) CmdSet(args []string) error {
 		return fmt.Errorf("end %s is before start %s (overnight shifts are not supported)", *endStr, *startStr)
 	}
 
-	season, err := a.Store.Season()
-	if err != nil {
-		return err
-	}
-
 	before, err := a.Store.GetDay(date)
 	if err != nil {
 		return err
@@ -214,7 +205,7 @@ func (a *App) CmdSet(args []string) error {
 		Date:            date,
 		Start:           &start,
 		End:             &end,
-		ExpectedMinutes: a.Config.ExpectedMinutesFor(season),
+		ExpectedMinutes: a.Config.ExpectedMinutesFor(a.Config.SeasonFor(date)),
 	}
 	// Preserve previous per-day overrides unless changed.
 	if before != nil && !before.IsOff {

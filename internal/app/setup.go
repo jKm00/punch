@@ -12,6 +12,7 @@ import (
 	"punch/internal/calc"
 	"punch/internal/domain"
 	"punch/internal/timeparse"
+	"punch/internal/ui"
 )
 
 // errSetupAborted is returned when the wizard hits EOF (or a read error) before
@@ -22,9 +23,8 @@ var errSetupAborted = errors.New("setup aborted")
 // CmdSetup runs the configuration wizard explicitly (`punch setup`). With
 // --curr it instead prints the currently-effective configuration and exits
 // without prompting or writing anything. The wizard always offers the hardcoded
-// recommended defaults (domain.DefaultConfig / domain.DefaultSeason) for each
-// prompt, regardless of any custom values currently stored. The current season
-// is read separately only for the --curr listing.
+// recommended defaults (domain.DefaultConfig) for each prompt, regardless of
+// any custom values currently stored.
 func (a *App) CmdSetup(args []string) error {
 	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
 	fs.SetOutput(a.Err)
@@ -34,19 +34,15 @@ func (a *App) CmdSetup(args []string) error {
 	}
 
 	if *curr {
-		season, err := a.Store.Season()
-		if err != nil {
-			return err
-		}
-		a.printConfig(a.Config, season)
+		a.printConfig(a.Config)
 		return nil
 	}
 
-	cfg, season, err := a.runWizard(domain.DefaultConfig(), domain.DefaultSeason)
+	cfg, err := a.runWizard(domain.DefaultConfig())
 	if err != nil {
 		return err
 	}
-	if err := a.Store.SaveConfig(cfg, season); err != nil {
+	if err := a.Store.SaveConfig(cfg); err != nil {
 		return err
 	}
 	a.Config = cfg
@@ -54,25 +50,58 @@ func (a *App) CmdSetup(args []string) error {
 	return nil
 }
 
-// printConfig writes the currently-effective configuration as a plain,
-// read-only listing. No prompts, no writes.
-func (a *App) printConfig(cfg domain.Config, season domain.Season) {
+// printConfig writes the currently-effective configuration as a read-only
+// titled box, matching the style of `punch week`/`punch status`. No prompts, no
+// writes. The layout adapts to whether seasons are enabled: when disabled the
+// season-specific rows and the current-season line are hidden in favour of
+// generic labels.
+func (a *App) printConfig(cfg domain.Config) {
 	s := a.styler()
-	a.printf("%s\n", s.Bold("punch configuration"))
-	a.printf("  %-28s %s\n", "Current season", s.Bold(string(season)))
-	a.printf("  %-28s %s\n", "Winter expected/day", calc.FormatHM(cfg.WinterExpectedMinutes))
-	a.printf("  %-28s %s\n", "Summer expected/day", calc.FormatHM(cfg.SummerExpectedMinutes))
-	a.printf("  %-28s %s\n", "Typical end of day (winter)", calc.FormatClock(cfg.WinterEndOfDay.Hour, cfg.WinterEndOfDay.Minute))
-	a.printf("  %-28s %s\n", "Typical end of day (summer)", calc.FormatClock(cfg.SummerEndOfDay.Hour, cfg.SummerEndOfDay.Minute))
-	a.printf("  %-28s %s\n", "Default lunch", calc.FormatHM(cfg.DefaultLunchMinutes))
+
+	// label renders a dim, fixed-width label so values align in a column.
+	const labelWidth = 14
+	row := func(label, value string) string {
+		return s.Dim(ui.PadRight(label, labelWidth)) + value
+	}
+
+	var lines []string
+	if !cfg.SeasonsEnabled {
+		lines = append(lines,
+			row("Seasons", s.Yellow("disabled")),
+			row("Expected", calc.FormatHM(cfg.WinterExpectedMinutes)),
+			row("End of day", calc.FormatClock(cfg.WinterEndOfDay.Hour, cfg.WinterEndOfDay.Minute)),
+			row("Lunch", calc.FormatHM(cfg.DefaultLunchMinutes)),
+		)
+		a.printf("%s", s.Box("Configuration", lines))
+		return
+	}
+
+	lines = append(lines,
+		row("Seasons", s.Green("enabled")),
+		row("Summer", fmt.Sprintf("%s – %s", formatMonthDayEU(cfg.SummerStart), formatMonthDayEU(cfg.SummerEnd))+
+			s.Dim("  (current: ")+string(a.Config.SeasonFor(a.dateOnly(a.now())))+s.Dim(")")),
+		row("Expected", calc.FormatHM(cfg.WinterExpectedMinutes)+s.Dim(" winter")+"   "+
+			calc.FormatHM(cfg.SummerExpectedMinutes)+s.Dim(" summer")),
+		row("End of day", calc.FormatClock(cfg.WinterEndOfDay.Hour, cfg.WinterEndOfDay.Minute)+s.Dim(" winter")+"   "+
+			calc.FormatClock(cfg.SummerEndOfDay.Hour, cfg.SummerEndOfDay.Minute)+s.Dim(" summer")),
+		row("Lunch", calc.FormatHM(cfg.DefaultLunchMinutes)),
+	)
+	a.printf("%s", s.Box("Configuration", lines))
+}
+
+// formatMonthDayEU renders a MonthDay in European DD.MM form for display.
+func formatMonthDayEU(md domain.MonthDay) string {
+	return fmt.Sprintf("%02d.%02d", md.Day, md.Month)
 }
 
 // runWizard prompts for every configurable value using defaults as the
 // currently-effective values. It collects all answers in memory and returns the
-// resolved Config and season without persisting anything. On EOF/read error
-// mid-wizard it returns errSetupAborted (wrapped) so the caller can abort
-// without writing partial state.
-func (a *App) runWizard(defaults domain.Config, defaultSeason domain.Season) (domain.Config, domain.Season, error) {
+// resolved Config without persisting anything. The first prompt decides whether
+// separate summer/winter schedules apply; when they do not, the season-specific
+// prompts are skipped and the single schedule is stored in the winter slot. On
+// EOF/read error mid-wizard it returns errSetupAborted (wrapped) so the caller
+// can abort without writing partial state.
+func (a *App) runWizard(defaults domain.Config) (domain.Config, error) {
 	sc := bufio.NewScanner(a.In)
 	// Allow long lines just in case; default is plenty but be safe.
 	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -83,42 +112,78 @@ func (a *App) runWizard(defaults domain.Config, defaultSeason domain.Season) (do
 
 	cfg := defaults
 
+	enabled, err := a.promptBool(sc, "Does your company have separate summer/winter schedules?", defaults.SeasonsEnabled)
+	if err != nil {
+		return domain.Config{}, err
+	}
+	cfg.SeasonsEnabled = enabled
+
+	if !enabled {
+		expected, err := a.promptDuration(sc, "Expected hours per day", defaults.WinterExpectedMinutes)
+		if err != nil {
+			return domain.Config{}, err
+		}
+		cfg.WinterExpectedMinutes = expected
+
+		endOfDay, err := a.promptTimeOfDay(sc, "Typical end of day", defaults.WinterEndOfDay)
+		if err != nil {
+			return domain.Config{}, err
+		}
+		cfg.WinterEndOfDay = endOfDay
+
+		lunch, err := a.promptDuration(sc, "Default lunch break in minutes", defaults.DefaultLunchMinutes)
+		if err != nil {
+			return domain.Config{}, err
+		}
+		cfg.DefaultLunchMinutes = lunch
+
+		// Summer fields and the interval are left at their defaults.
+		return cfg, nil
+	}
+
 	winterExpected, err := a.promptDuration(sc, "Winter expected hours per day", defaults.WinterExpectedMinutes)
 	if err != nil {
-		return domain.Config{}, "", err
+		return domain.Config{}, err
 	}
 	cfg.WinterExpectedMinutes = winterExpected
 
 	summerExpected, err := a.promptDuration(sc, "Summer expected hours per day", defaults.SummerExpectedMinutes)
 	if err != nil {
-		return domain.Config{}, "", err
+		return domain.Config{}, err
 	}
 	cfg.SummerExpectedMinutes = summerExpected
 
 	winterEnd, err := a.promptTimeOfDay(sc, "Typical end of day (winter)", defaults.WinterEndOfDay)
 	if err != nil {
-		return domain.Config{}, "", err
+		return domain.Config{}, err
 	}
 	cfg.WinterEndOfDay = winterEnd
 
 	summerEnd, err := a.promptTimeOfDay(sc, "Typical end of day (summer)", defaults.SummerEndOfDay)
 	if err != nil {
-		return domain.Config{}, "", err
+		return domain.Config{}, err
 	}
 	cfg.SummerEndOfDay = summerEnd
 
+	summerStart, err := a.promptMonthDay(sc, "Summer period start", defaults.SummerStart)
+	if err != nil {
+		return domain.Config{}, err
+	}
+	cfg.SummerStart = summerStart
+
+	summerEndDate, err := a.promptMonthDay(sc, "Summer period end", defaults.SummerEnd)
+	if err != nil {
+		return domain.Config{}, err
+	}
+	cfg.SummerEnd = summerEndDate
+
 	lunch, err := a.promptDuration(sc, "Default lunch break in minutes", defaults.DefaultLunchMinutes)
 	if err != nil {
-		return domain.Config{}, "", err
+		return domain.Config{}, err
 	}
 	cfg.DefaultLunchMinutes = lunch
 
-	season, err := a.promptSeason(sc, "Which season are you in right now?", defaultSeason)
-	if err != nil {
-		return domain.Config{}, "", err
-	}
-
-	return cfg, season, nil
+	return cfg, nil
 }
 
 // readLine reads a single trimmed line from the scanner. The boolean is false
@@ -174,27 +239,53 @@ func (a *App) promptTimeOfDay(sc *bufio.Scanner, label string, def domain.TimeOf
 	}
 }
 
-// promptSeason asks for the current season, showing the default. Empty input
-// keeps the default. Unknown seasons re-prompt (no silent defaulting). EOF
-// aborts.
-func (a *App) promptSeason(sc *bufio.Scanner, label string, def domain.Season) (domain.Season, error) {
+// promptBool asks a yes/no question, showing the default as (Y/n) or (y/N).
+// Empty input keeps the default. Unrecognised input re-prompts (no silent
+// defaulting). EOF aborts.
+func (a *App) promptBool(sc *bufio.Scanner, label string, def bool) (bool, error) {
+	hint := "(Y/n)"
+	if !def {
+		hint = "(y/N)"
+	}
 	for {
-		a.printf("%s [%s] (summer/winter): ", label, string(def))
+		a.printf("%s %s: ", label, hint)
 		line, ok := readLine(sc)
 		if !ok {
-			return "", fmt.Errorf("%w: unexpected end of input", errSetupAborted)
+			return false, fmt.Errorf("%w: unexpected end of input", errSetupAborted)
 		}
 		if line == "" {
 			return def, nil
 		}
-		switch domain.Season(strings.ToLower(line)) {
-		case domain.Summer:
-			return domain.Summer, nil
-		case domain.Winter:
-			return domain.Winter, nil
+		switch strings.ToLower(line) {
+		case "y", "yes":
+			return true, nil
+		case "n", "no":
+			return false, nil
 		default:
-			a.errorf("  %s unknown season %q: use `summer` or `winter`\n", a.styler().Red("invalid:"), line)
+			a.errorf("  %s answer yes or no\n", a.styler().Red("invalid:"))
 		}
+	}
+}
+
+// promptMonthDay asks for a recurring month/day, showing the default in
+// European DD.MM form. It accepts DD.MM or DD-MM. Empty input keeps the
+// default. Invalid input re-prompts. EOF aborts.
+func (a *App) promptMonthDay(sc *bufio.Scanner, label string, def domain.MonthDay) (domain.MonthDay, error) {
+	for {
+		a.printf("%s [%s]: ", label, formatMonthDayEU(def))
+		line, ok := readLine(sc)
+		if !ok {
+			return domain.MonthDay{}, fmt.Errorf("%w: unexpected end of input", errSetupAborted)
+		}
+		if line == "" {
+			return def, nil
+		}
+		m, d, err := timeparse.ParseMonthDay(line)
+		if err != nil {
+			a.errorf("  %s %v\n", a.styler().Red("invalid:"), err)
+			continue
+		}
+		return domain.MonthDay{Month: m, Day: d}, nil
 	}
 }
 

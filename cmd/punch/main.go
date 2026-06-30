@@ -130,8 +130,6 @@ func dispatch(a *app.App, cmd string, rest []string) error {
 		return a.CmdUnlogged(rest)
 	case "log":
 		return a.CmdLog(rest)
-	case "season":
-		return a.CmdSeason(rest)
 	case "setup":
 		return a.CmdSetup(rest)
 	case "status":

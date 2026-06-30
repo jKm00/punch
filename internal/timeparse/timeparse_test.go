@@ -89,6 +89,48 @@ func TestParseTime(t *testing.T) {
 	}
 }
 
+func TestParseMonthDay(t *testing.T) {
+	tests := []struct {
+		in      string
+		wantM   int
+		wantD   int
+		wantErr bool
+	}{
+		{in: "15.05", wantM: 5, wantD: 15},
+		{in: "15-05", wantM: 5, wantD: 15},
+		{in: "31.08", wantM: 8, wantD: 31},
+		{in: "01.01", wantM: 1, wantD: 1},
+		{in: "29.02", wantM: 2, wantD: 29}, // leap-day allowed (year-agnostic)
+		// rejections
+		{in: "30.02", wantErr: true}, // no 30th of Feb
+		{in: "32.01", wantErr: true}, // day out of range
+		{in: "13.13", wantErr: true}, // month out of range
+		{in: "00.01", wantErr: true}, // day 0
+		{in: "15.00", wantErr: true}, // month 0
+		{in: "31.04", wantErr: true}, // April has 30 days
+		{in: "garbage", wantErr: true},
+		{in: "15/05", wantErr: true}, // slash not supported
+		{in: "", wantErr: true},
+		{in: "15", wantErr: true}, // missing separator
+	}
+	for _, tc := range tests {
+		m, d, err := ParseMonthDay(tc.in)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("ParseMonthDay(%q): expected error, got %d-%d", tc.in, m, d)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("ParseMonthDay(%q): unexpected error %v", tc.in, err)
+			continue
+		}
+		if m != tc.wantM || d != tc.wantD {
+			t.Errorf("ParseMonthDay(%q) = month %d day %d, want month %d day %d", tc.in, m, d, tc.wantM, tc.wantD)
+		}
+	}
+}
+
 func TestParseDuration(t *testing.T) {
 	tests := []struct {
 		in      string

@@ -14,6 +14,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"punch/internal/domain"
+	"punch/internal/timeparse"
 )
 
 // DateLayout is the ISO date format used for the days.date primary key.
@@ -131,12 +132,16 @@ UPDATE OR IGNORE settings SET key = 'summer_end_of_day' WHERE key = 'summer_logg
 	if _, err := s.db.Exec(renameKeys); err != nil {
 		return fmt.Errorf("migrate (rename keys): %w", err)
 	}
+	// One-time cleanup: seasons are now derived from each day's date rather
+	// than a stored toggle, so the stale `season` row is removed. Idempotent:
+	// a no-op once gone, and harmless if it never existed.
+	if _, err := s.db.Exec(`DELETE FROM settings WHERE key = 'season'`); err != nil {
+		return fmt.Errorf("migrate (drop season): %w", err)
+	}
 	return nil
 }
 
 // ---- settings ----
-
-const seasonKey = "season"
 
 // Settings keys for the configurable values written by the setup wizard. Each
 // is one row in the generic key/value settings table. When a key is absent the
@@ -147,6 +152,9 @@ const (
 	winterEndOfDayKey        = "winter_end_of_day"
 	summerEndOfDayKey        = "summer_end_of_day"
 	defaultLunchMinutesKey   = "default_lunch_minutes"
+	seasonsEnabledKey        = "seasons_enabled"
+	summerStartKey           = "summer_start"
+	summerEndKey             = "summer_end"
 
 	// setupCompletedKey is the sentinel written LAST after a successful setup
 	// run. Its presence marks setup as complete.
@@ -185,15 +193,17 @@ func (s *Store) SetupCompleted() (bool, error) {
 // SaveConfig persists every configurable value and, last of all, the
 // setup_completed sentinel. Values are written sequentially; the sentinel is
 // written only after all others succeed so an interrupted run is not treated as
-// complete. season is written via the same key as `punch season`.
-func (s *Store) SaveConfig(cfg domain.Config, season domain.Season) error {
+// complete.
+func (s *Store) SaveConfig(cfg domain.Config) error {
 	writes := []struct{ key, value string }{
 		{winterExpectedMinutesKey, strconv.Itoa(cfg.WinterExpectedMinutes)},
 		{summerExpectedMinutesKey, strconv.Itoa(cfg.SummerExpectedMinutes)},
 		{winterEndOfDayKey, formatTimeOfDay(cfg.WinterEndOfDay)},
 		{summerEndOfDayKey, formatTimeOfDay(cfg.SummerEndOfDay)},
 		{defaultLunchMinutesKey, strconv.Itoa(cfg.DefaultLunchMinutes)},
-		{seasonKey, string(season)},
+		{seasonsEnabledKey, strconv.FormatBool(cfg.SeasonsEnabled)},
+		{summerStartKey, formatMonthDay(cfg.SummerStart)},
+		{summerEndKey, formatMonthDay(cfg.SummerEnd)},
 	}
 	for _, w := range writes {
 		if err := s.setSetting(w.key, w.value); err != nil {
@@ -246,6 +256,27 @@ func (s *Store) LoadConfig() (domain.Config, error) {
 			cfg.DefaultLunchMinutes = n
 		}
 	}
+	if v, ok, err := s.getSetting(seasonsEnabledKey); err != nil {
+		return cfg, err
+	} else if ok {
+		if b, perr := strconv.ParseBool(v); perr == nil {
+			cfg.SeasonsEnabled = b
+		}
+	}
+	if v, ok, err := s.getSetting(summerStartKey); err != nil {
+		return cfg, err
+	} else if ok {
+		if md, perr := parseMonthDay(v); perr == nil {
+			cfg.SummerStart = md
+		}
+	}
+	if v, ok, err := s.getSetting(summerEndKey); err != nil {
+		return cfg, err
+	} else if ok {
+		if md, perr := parseMonthDay(v); perr == nil {
+			cfg.SummerEnd = md
+		}
+	}
 	return cfg, nil
 }
 
@@ -263,21 +294,18 @@ func parseTimeOfDay(v string) (domain.TimeOfDay, error) {
 	return domain.TimeOfDay{Hour: t.Hour(), Minute: t.Minute()}, nil
 }
 
-// Season returns the configured season, defaulting when unset.
-func (s *Store) Season() (domain.Season, error) {
-	v, ok, err := s.getSetting(seasonKey)
-	if err != nil {
-		return "", err
-	}
-	if !ok {
-		return domain.DefaultSeason, nil
-	}
-	return domain.Normalize(v), nil
+// formatMonthDay renders a MonthDay as "DD-MM" for storage.
+func formatMonthDay(md domain.MonthDay) string {
+	return fmt.Sprintf("%02d-%02d", md.Day, md.Month)
 }
 
-// SetSeason persists the season.
-func (s *Store) SetSeason(season domain.Season) error {
-	return s.setSetting(seasonKey, string(season))
+// parseMonthDay parses a stored "DD-MM" value into a MonthDay.
+func parseMonthDay(v string) (domain.MonthDay, error) {
+	m, d, err := timeparse.ParseMonthDay(v)
+	if err != nil {
+		return domain.MonthDay{}, fmt.Errorf("parse month/day %q: %w", v, err)
+	}
+	return domain.MonthDay{Month: m, Day: d}, nil
 }
 
 // ---- days ----

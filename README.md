@@ -121,16 +121,21 @@ To change them, run the setup wizard:
 punch setup
 ```
 
-It configures the **expected hours per day** (winter/summer), the **typical end
-of day** (winter/summer — the time you normally leave, used to anchor the
-suggested weekly logging range in `punch week`), the **default lunch break**,
-and the **current season**. Each prompt shows the recommended default in
-brackets — press **Enter** to accept it. Values are stored alongside your hours
-and persist across runs; the wizard always offers the built-in defaults, so
-accepting every prompt resets to the recommendations. See the default values in
-[Rules & constants](#rules--constants).
+It first asks whether your company has **separate summer/winter schedules**. If
+so, it configures the **expected hours per day** (winter/summer), the **typical
+end of day** (winter/summer — the time you normally leave, used to anchor the
+suggested weekly logging range in `punch week`), the **summer period** (the
+recurring start/end dates, day-first, that define when summer applies), and the
+**default lunch break**. If your company has a single schedule, it instead asks
+for one **expected hours per day**, one **typical end of day**, and the default
+lunch — summer/winter never come into play. Each prompt shows the recommended
+default in brackets — press **Enter** to accept it. Values are stored alongside
+your hours and persist across runs; the wizard always offers the built-in
+defaults, so accepting every prompt resets to the recommendations. See the
+default values in [Rules & constants](#rules--constants).
 
-`punch season` also writes the same season setting on its own.
+The season in effect on any given day is **derived from that day's date**
+against the configured summer period — there is no manual toggle to set.
 
 ## Rules & constants
 
@@ -145,6 +150,7 @@ threshold are not configurable.
 | Expected per day — summer    | 7h                               | yes          |
 | Typical end of day — winter  | 16:00                            | yes          |
 | Typical end of day — summer  | 15:30                            | yes          |
+| Summer period                | 15.05 – 31.08 (inclusive)        | yes          |
 | Clock adjustment             | ±5 minutes                       | no           |
 
 - **Clock adjustment:** a bare `punch in` records `now − 5min`; a bare `punch out`
@@ -156,7 +162,9 @@ threshold are not configurable.
 - **Future timestamps** are rejected unless `--force` (the small ±5min bare
   adjustment is exempt).
 - **Very long days** (worked > ~16h) warn but are allowed.
-- **Default season** is `winter` until you set it.
+- **Season** is **derived from each day's date** against the configured summer
+  period (default 15.05 – 31.08, inclusive). Disable seasons in `punch setup` to
+  use a single year-round schedule.
 
 ## Date & time input formats
 
@@ -184,7 +192,6 @@ punch clear DATE                             Delete a day's record entirely.
 punch week  [N|last] [--year YYYY]           Week summary.
 punch unlogged                               List past unlogged weeks with worked time.
 punch log   [N|last] [--year YYYY]           Toggle a week's logged state.
-punch season [summer|winter]                 Print or set the season.
 punch setup [--curr]                         Configure punch; --curr prints current config.
 punch status                                 Show clock-in state and time so far today.
 punch analytics [YEAR]                       Yearly dashboard (default: current year).
@@ -300,17 +307,6 @@ Toggles the week's logged state: an unlogged week is marked logged (recording a
 resulting status. When marking a week logged, it warns (but still proceeds) for
 empty or current-week logs.
 
-### `punch season` — print or set the season
-
-```sh
-punch season                   # print current season
-punch season summer            # set season to summer
-punch season winter            # set season to winter
-```
-
-Only affects days created **after** the change (expected hours are snapshotted
-per day).
-
 ### `punch setup` — configure punch
 
 ```sh
@@ -318,11 +314,13 @@ punch setup                    # re-run the configuration wizard
 punch setup --curr             # print the current configuration (no prompts)
 ```
 
-Walks through the configurable values (expected hours per season, typical
-end-of-day times, default lunch, and the current season), showing the
-**recommended default** as the `[default]` for each prompt — press Enter to
-accept it. The wizard always offers the built-in recommended defaults, even if
-you have custom values stored, so re-running it lets you reset toward the
+Walks through the configurable values, showing the **recommended default** as
+the `[default]` for each prompt — press Enter to accept it. The first question
+asks whether your company has separate summer/winter schedules: if yes, it
+prompts for the per-season expected hours and end-of-day times plus the summer
+period start/end (day-first dates); if no, it prompts once for expected hours
+and end of day. The wizard always offers the built-in recommended defaults, even
+if you have custom values stored, so re-running it lets you reset toward the
 recommendations. Setup is optional — `punch` uses the defaults until you run
 this. Use `--curr` to print the currently-effective configuration without
 prompting or changing anything. See [Configuration](#configuration) for details.
@@ -333,8 +331,8 @@ prompting or changing anything. See [Configuration](#configuration) for details.
 punch status
 ```
 
-Shows today's date and season, whether you are currently clocked in, and how
-much time has accrued today.
+Shows today's date and (when seasons are enabled) the derived season, whether
+you are currently clocked in, and how much time has accrued today.
 
 ### `punch analytics` — yearly dashboard
 

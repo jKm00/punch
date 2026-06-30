@@ -19,21 +19,72 @@ func openTemp(t *testing.T) *Store {
 	return st
 }
 
-func TestSeasonRoundTrip(t *testing.T) {
+func TestNewConfigFieldsRoundTrip(t *testing.T) {
 	st := openTemp(t)
-	s, err := st.Season()
+
+	// Absent keys must resolve to the domain defaults.
+	cfg, err := st.LoadConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s != domain.DefaultSeason {
-		t.Errorf("default season = %s, want %s", s, domain.DefaultSeason)
+	def := domain.DefaultConfig()
+	if cfg.SeasonsEnabled != def.SeasonsEnabled {
+		t.Errorf("default SeasonsEnabled = %v, want %v", cfg.SeasonsEnabled, def.SeasonsEnabled)
 	}
-	if err := st.SetSeason(domain.Summer); err != nil {
+	if cfg.SummerStart != def.SummerStart {
+		t.Errorf("default SummerStart = %+v, want %+v", cfg.SummerStart, def.SummerStart)
+	}
+	if cfg.SummerEnd != def.SummerEnd {
+		t.Errorf("default SummerEnd = %+v, want %+v", cfg.SummerEnd, def.SummerEnd)
+	}
+
+	// Save custom values and read them back unchanged.
+	want := domain.DefaultConfig()
+	want.SeasonsEnabled = false
+	want.SummerStart = domain.MonthDay{Month: 6, Day: 1}
+	want.SummerEnd = domain.MonthDay{Month: 9, Day: 15}
+	if err := st.SaveConfig(want); err != nil {
+		t.Fatalf("SaveConfig: %v", err)
+	}
+	got, err := st.LoadConfig()
+	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ = st.Season()
-	if s != domain.Summer {
-		t.Errorf("season = %s, want summer", s)
+	if got.SeasonsEnabled != want.SeasonsEnabled {
+		t.Errorf("SeasonsEnabled = %v, want %v", got.SeasonsEnabled, want.SeasonsEnabled)
+	}
+	if got.SummerStart != want.SummerStart {
+		t.Errorf("SummerStart = %+v, want %+v", got.SummerStart, want.SummerStart)
+	}
+	if got.SummerEnd != want.SummerEnd {
+		t.Errorf("SummerEnd = %+v, want %+v", got.SummerEnd, want.SummerEnd)
+	}
+}
+
+// TestStaleSeasonRowDeletedOnOpen verifies the one-time cleanup migration:
+// a stale `season` settings row left over from the old manual toggle is removed
+// on the next Open.
+func TestStaleSeasonRowDeletedOnOpen(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "wh.db")
+
+	st, err := Open(path, time.UTC)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	if err := st.setSetting("season", "summer"); err != nil {
+		t.Fatal(err)
+	}
+	st.Close()
+
+	st2, err := Open(path, time.UTC)
+	if err != nil {
+		t.Fatalf("re-open: %v", err)
+	}
+	t.Cleanup(func() { st2.Close() })
+
+	if _, ok, _ := st2.getSetting("season"); ok {
+		t.Error("stale season row should have been deleted on Open")
 	}
 }
 
